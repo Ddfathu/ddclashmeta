@@ -184,7 +184,7 @@
                                         android:layout_width="wrap_content"
                                         android:layout_height="wrap_content"
                                         android:layout_marginStart="6dp"
-                                        android:text="DOWNLOAD"
+                                        android:text="TRAFFIC"
                                         android:textColor="#9E9E9E"
                                         android:textSize="11sp"
                                         android:textStyle="bold" />
