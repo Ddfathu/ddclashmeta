@@ -38,90 +38,124 @@
         android:paddingStart="@{self.surface.insets.start}"
         android:paddingEnd="@{self.surface.insets.end}">
 
+        <!-- KONTEN TENGAH / ATAS -->
         <ScrollView
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:layout_marginBottom="64dp"
+            android:layout_marginBottom="90dp"
             android:scrollbars="none">
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:animateLayoutChanges="true"
-                android:clipToPadding="false"
                 android:orientation="vertical"
-                android:paddingHorizontal="16dp"
+                android:paddingHorizontal="20dp"
                 android:paddingTop="@{self.surface.insets.top}"
-                android:paddingBottom="16dp">
+                android:paddingBottom="24dp">
 
-                <!-- Header Brand DDclash Meta -->
-                <LinearLayout
+                <!-- Header Logo & Brand DDclash Meta + Tombol About Di Atas -->
+                <RelativeLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:gravity="center_vertical"
-                    android:minHeight="@dimen/main_top_banner_height"
-                    android:orientation="horizontal">
+                    android:layout_marginTop="12dp"
+                    android:layout_marginBottom="24dp">
 
-                    <FrameLayout
-                        android:layout_width="@dimen/large_item_header_layout_size"
-                        android:layout_height="@dimen/large_item_header_layout_size">
-
-                        <View
-                            android:layout_width="@dimen/main_logo_size"
-                            android:layout_height="@dimen/main_logo_size"
-                            android:layout_gravity="center"
-                            android:background="@drawable/ic_clash" />
-                    </FrameLayout>
-
-                    <TextView
+                    <LinearLayout
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="@string/application_name"
-                        android:textColor="#311B92"
-                        android:textStyle="bold"
-                        android:textAppearance="@style/TextAppearance.MaterialComponents.Headline6" />
-                </LinearLayout>
+                        android:layout_alignParentStart="true"
+                        android:layout_centerVertical="true"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
 
-                <!-- Tombol Status Start / Stop -->
+                        <ImageView
+                            android:layout_width="44dp"
+                            android:layout_height="44dp"
+                            android:src="@drawable/ic_clash" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="12dp"
+                            android:text="@string/application_name"
+                            android:textColor="#311B92"
+                            android:textSize="22sp"
+                            android:textStyle="bold" />
+                    </LinearLayout>
+
+                    <!-- Tombol About Ditaruh di Pojok Atas Kanan -->
+                    <ImageView
+                        android:layout_width="40dp"
+                        android:layout_height="40dp"
+                        android:layout_alignParentEnd="true"
+                        android:layout_centerVertical="true"
+                        android:background="?attr/selectableItemBackgroundBorderless"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:onClick="@{() -> self.request(Request.OpenAbout)}"
+                        android:padding="8dp"
+                        android:src="@drawable/ic_baseline_info"
+                        android:tint="#7C4DFF" />
+                </RelativeLayout>
+
+                <!-- Panel Status Trafik / Info Terkoneksi -->
+                <androidx.cardview.widget.CardView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="16dp"
+                    app:cardBackgroundColor="#FFFFFF"
+                    app:cardCornerRadius="18dp"
+                    app:cardElevation="2dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center"
+                        android:orientation="vertical"
+                        android:padding="24dp">
+
+                        <ImageView
+                            android:layout_width="56dp"
+                            android:layout_height="56dp"
+                            android:src="@{clashRunning ? @drawable/ic_outline_check_circle : @drawable/ic_outline_not_interested}"
+                            android:tint="@{clashRunning ? 0xFF00C853 : 0xFFB0BEC5}" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="12dp"
+                            android:text="@{clashRunning ? @string/running : @string/stopped}"
+                            android:textColor="#212121"
+                            android:textSize="18sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp"
+                            android:text="@{clashRunning ? @string/format_traffic_forwarded(forwarded) : @string/tap_to_start}"
+                            android:textColor="#757575"
+                            android:textSize="13sp" />
+                    </LinearLayout>
+                </androidx.cardview.widget.CardView>
+
+                <!-- Menu Proxy (Muncul saat running) -->
                 <com.github.kr328.clash.design.view.LargeActionCard
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginVertical="@dimen/main_card_margin_vertical"
-                    android:onClick="@{() -> self.request(Request.ToggleStatus)}"
-                    android:theme="@style/AppThemeDark"
-                    app:cardBackgroundColor="@{clashRunning ? 0xFF7C4DFF : 0xFF512DA8}"
-                    app:icon="@{clashRunning ? @drawable/ic_outline_check_circle : @drawable/ic_outline_not_interested}"
-                    app:subtext="@{clashRunning ? @string/format_traffic_forwarded(forwarded) : @string/tap_to_start}"
-                    app:text="@{clashRunning ? @string/running : @string/stopped}">
-                    <requestFocus />
-                </com.github.kr328.clash.design.view.LargeActionCard>
-
-                <!-- Menu Proxy -->
-                <com.github.kr328.clash.design.view.LargeActionCard
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginVertical="@dimen/main_card_margin_vertical"
+                    android:layout_marginVertical="6dp"
                     android:onClick="@{() -> self.request(Request.OpenProxy)}"
                     android:visibility="@{clashRunning ? View.VISIBLE : View.GONE}"
                     app:icon="@drawable/ic_baseline_apps"
                     app:subtext="@{mode}"
                     app:text="@string/proxy" />
 
-                <!-- Menu Profile -->
-                <com.github.kr328.clash.design.view.LargeActionCard
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginVertical="@dimen/main_card_margin_vertical"
-                    android:onClick="@{() -> self.request(Request.OpenProfiles)}"
-                    app:icon="@drawable/ic_baseline_view_list"
-                    app:subtext="@{profileName != null ? @string/format_profile_activated(profileName) : @string/not_selected}"
-                    app:text="@string/profile" />
-
-                <!-- Menu Providers -->
+                <!-- Menu Providers (Jika ada) -->
                 <com.github.kr328.clash.design.view.LargeActionLabel
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginVertical="@dimen/main_label_margin_vertical"
+                    android:layout_marginVertical="6dp"
                     android:onClick="@{() -> self.request(Request.OpenProviders)}"
                     android:visibility="@{clashRunning &amp;&amp; hasProviders ? View.VISIBLE : View.GONE}"
                     app:icon="@drawable/ic_baseline_swap_vertical_circle"
@@ -130,117 +164,162 @@
             </LinearLayout>
         </ScrollView>
 
-        <!-- Menu Bawah (Bottom Bar Horizontal) -->
+        <!-- BILAH NAVIGASI BAWAH (BOTTOM BAR MODERN) -->
         <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="64dp"
+            android:layout_height="wrap_content"
             android:layout_gravity="bottom"
             android:background="#FFFFFF"
-            android:elevation="8dp"
-            android:gravity="center"
-            android:orientation="horizontal"
+            android:elevation="12dp"
+            android:orientation="vertical"
             android:paddingBottom="@{self.surface.insets.bottom}">
 
             <LinearLayout
-                android:layout_width="0dp"
-                android:layout_height="match_parent"
-                android:layout_weight="1"
-                android:background="?attr/selectableItemBackground"
-                android:clickable="true"
-                android:focusable="true"
-                android:gravity="center"
-                android:onClick="@{() -> self.request(Request.OpenLogs)}"
-                android:orientation="vertical">
+                android:layout_width="match_parent"
+                android:layout_height="72dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingHorizontal="12dp">
 
-                <ImageView
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:src="@drawable/ic_baseline_assignment"
-                    app:tint="#7C4DFF" />
+                <!-- 1. KIRI 1: LOGS -->
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1"
+                    android:background="?attr/selectableItemBackground"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:gravity="center"
+                    android:onClick="@{() -> self.request(Request.OpenLogs)}"
+                    android:orientation="vertical">
 
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="@string/logs"
-                    android:textColor="#311B92"
-                    android:textSize="11sp" />
+                    <ImageView
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:src="@drawable/ic_baseline_assignment"
+                        android:tint="#7C4DFF" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:text="@string/logs"
+                        android:textColor="#311B92"
+                        android:textSize="11sp" />
+                </LinearLayout>
+
+                <!-- 2. KIRI 2: SETTINGS -->
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1"
+                    android:background="?attr/selectableItemBackground"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:gravity="center"
+                    android:onClick="@{() -> self.request(Request.OpenSettings)}"
+                    android:orientation="vertical">
+
+                    <ImageView
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:src="@drawable/ic_baseline_settings"
+                        android:tint="#7C4DFF" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:text="@string/settings"
+                        android:textColor="#311B92"
+                        android:textSize="11sp" />
+                </LinearLayout>
+
+                <!-- 3. TENGAH: TOMBOL UTAMA START / STOP -->
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1.3"
+                    android:gravity="center">
+
+                    <androidx.cardview.widget.CardView
+                        android:layout_width="56dp"
+                        android:layout_height="56dp"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:foreground="?attr/selectableItemBackground"
+                        android:onClick="@{() -> self.request(Request.ToggleStatus)}"
+                        app:cardBackgroundColor="@{clashRunning ? 0xFF00C853 : 0xFF7C4DFF}"
+                        app:cardCornerRadius="28dp"
+                        app:cardElevation="4dp">
+
+                        <ImageView
+                            android:layout_width="28dp"
+                            android:layout_height="28dp"
+                            android:layout_gravity="center"
+                            android:src="@{clashRunning ? @drawable/ic_outline_not_interested : @drawable/ic_baseline_flash_on}"
+                            android:tint="#FFFFFF" />
+                    </androidx.cardview.widget.CardView>
+                </LinearLayout>
+
+                <!-- 4. KANAN 1: HELP -->
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1"
+                    android:background="?attr/selectableItemBackground"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:gravity="center"
+                    android:onClick="@{() -> self.request(Request.OpenHelp)}"
+                    android:orientation="vertical">
+
+                    <ImageView
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:src="@drawable/ic_baseline_help_center"
+                        android:tint="#7C4DFF" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:text="@string/help"
+                        android:textColor="#311B92"
+                        android:textSize="11sp" />
+                </LinearLayout>
+
+                <!-- 5. KANAN 2: PROFILE (Sesuai Permintaan di Bawah Kanan) -->
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1.1"
+                    android:background="?attr/selectableItemBackground"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:gravity="center"
+                    android:onClick="@{() -> self.request(Request.OpenProfiles)}"
+                    android:orientation="vertical">
+
+                    <ImageView
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:src="@drawable/ic_baseline_view_list"
+                        android:tint="#7C4DFF" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:ellipsize="end"
+                        android:maxLines="1"
+                        android:text="@{profileName != null ? profileName : @string/profile}"
+                        android:textColor="#311B92"
+                        android:textSize="11sp" />
+                </LinearLayout>
+
             </LinearLayout>
-
-            <LinearLayout
-                android:layout_width="0dp"
-                android:layout_height="match_parent"
-                android:layout_weight="1"
-                android:background="?attr/selectableItemBackground"
-                android:clickable="true"
-                android:focusable="true"
-                android:gravity="center"
-                android:onClick="@{() -> self.request(Request.OpenSettings)}"
-                android:orientation="vertical">
-
-                <ImageView
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:src="@drawable/ic_baseline_settings"
-                    app:tint="#7C4DFF" />
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="@string/settings"
-                    android:textColor="#311B92"
-                    android:textSize="11sp" />
-            </LinearLayout>
-
-            <LinearLayout
-                android:layout_width="0dp"
-                android:layout_height="match_parent"
-                android:layout_weight="1"
-                android:background="?attr/selectableItemBackground"
-                android:clickable="true"
-                android:focusable="true"
-                android:gravity="center"
-                android:onClick="@{() -> self.request(Request.OpenHelp)}"
-                android:orientation="vertical">
-
-                <ImageView
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:src="@drawable/ic_baseline_help_center"
-                    app:tint="#7C4DFF" />
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="@string/help"
-                    android:textColor="#311B92"
-                    android:textSize="11sp" />
-            </LinearLayout>
-
-            <LinearLayout
-                android:layout_width="0dp"
-                android:layout_height="match_parent"
-                android:layout_weight="1"
-                android:background="?attr/selectableItemBackground"
-                android:clickable="true"
-                android:focusable="true"
-                android:gravity="center"
-                android:onClick="@{() -> self.request(Request.OpenAbout)}"
-                android:orientation="vertical">
-
-                <ImageView
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:src="@drawable/ic_baseline_info"
-                    app:tint="#7C4DFF" />
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="@string/about"
-                    android:textColor="#311B92"
-                    android:textSize="11sp" />
-            </LinearLayout>
-
         </LinearLayout>
+
     </androidx.coordinatorlayout.widget.CoordinatorLayout>
 </layout>
