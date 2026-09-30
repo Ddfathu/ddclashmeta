@@ -1,19 +1,24 @@
 package com.github.kr328.clash
 
 import android.app.Activity
+import android.content.ClipboardManager
 import android.content.ComponentName
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.provider.Settings
+import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.lifecycle.lifecycleScope
 import com.github.kr328.clash.common.constants.Intents
+import com.github.kr328.clash.common.util.ProxyLinkConverter
 import com.github.kr328.clash.common.util.intent
 import com.github.kr328.clash.common.util.setUUID
 import com.github.kr328.clash.design.NewProfileDesign
 import com.github.kr328.clash.design.R
 import com.github.kr328.clash.design.model.ProfileProvider
 import com.github.kr328.clash.design.util.showExceptionToast
+import com.github.kr328.clash.remote.FilesClient
 import com.github.kr328.clash.service.model.Profile
 import com.github.kr328.clash.util.withProfile
 import io.github.g00fy2.quickie.QRResult
@@ -27,6 +32,7 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.selects.select
 import kotlinx.coroutines.withContext
+import java.io.OutputStreamWriter
 import java.util.*
 
 class NewProfileActivity : BaseActivity<NewProfileDesign>() {
@@ -50,39 +56,47 @@ class NewProfileActivity : BaseActivity<NewProfileDesign>() {
                 design.requests.onReceive {
                     when (it) {
                         is NewProfileDesign.Request.Create -> {
-                            withProfile {
-                                val name = getString(R.string.new_profile)
+                            if (it.provider is ProfileProvider.Clipboard) {
+                                handleClipboardImport()
+                            } else {
+                                withProfile {
+                                    val name = getString(R.string.new_profile)
 
-                                val uuid: UUID? = when (val p = it.provider) {
-                                    is ProfileProvider.File ->
-                                        create(Profile.Type.File, name)
+                                    val uuid: UUID? = when (val p = it.provider) {
+                                        is ProfileProvider.File ->
+                                            create(Profile.Type.File, name)
 
-                                    is ProfileProvider.Url ->
-                                        create(Profile.Type.Url, name)
+                                        is ProfileProvider.Url ->
+                                            create(Profile.Type.Url, name)
 
-                                    is ProfileProvider.QR -> {
-                                        null
-                                    }
-
-                                    is ProfileProvider.External -> {
-                                        val data = p.get()
-
-                                        if (data != null) {
-                                            val (uri, initialName) = data
-
-                                            create(
-                                                Profile.Type.External,
-                                                initialName ?: name,
-                                                uri.toString()
-                                            )
-                                        } else {
+                                        is ProfileProvider.QR -> {
                                             null
                                         }
-                                    }
-                                }
 
-                                if (uuid != null)
-                                    launchProperties(uuid)
+                                        is ProfileProvider.Clipboard -> {
+                                            null
+                                        }
+
+                                        is ProfileProvider.External -> {
+                                            val data = p.get()
+
+                                            if (data != null) {
+                                                val (uri, initialName) = data
+
+                                                create(
+                                                    Profile.Type.External,
+                                                    initialName ?: name,
+                                                    uri.toString()
+                                                )
+                                            } else {
+                                                null
+                                            }
+                                        }
+                                    }
+
+                                    if (uuid != null)
+                                        launchProperties(uuid)
+                                }
                             }
                         }
 
@@ -95,6 +109,52 @@ class NewProfileActivity : BaseActivity<NewProfileDesign>() {
                         }
                     }
                 }
+            }
+        }
+    }
+
+    private suspend fun handleClipboardImport() {
+        val cm = getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
+        val clipData = cm?.primaryClip
+        val text = if (clipData != null && clipData.itemCount > 0) {
+            clipData.getItemAt(0)?.text?.toString().orEmpty()
+        } else {
+            ""
+        }
+
+        if (text.isBlank() || !ProxyLinkConverter.isProxyLink(text)) {
+            withContext(Dispatchers.Main) {
+                Toast.makeText(this@NewProfileActivity, "Clipboard kosong atau tidak ada link vless/vmess/trojan", Toast.LENGTH_SHORT).show()
+            }
+            return
+        }
+
+        try {
+            val yamlContent = ProxyLinkConverter.toClashYaml(text)
+            
+            withProfile {
+                val profileId = create(Profile.Type.File, "Imported-Nodes")
+                val client = FilesClient(this@NewProfileActivity)
+                
+                withContext(Dispatchers.IO) {
+                    val targetUri = client.buildDocumentUri("$profileId/config.yaml")
+                    val outputStream = contentResolver.openOutputStream(targetUri, "rwt")
+                        ?: throw IllegalStateException("Gagal membuka stream berkas profil")
+                    
+                    OutputStreamWriter(outputStream).use { writer ->
+                        writer.write(yamlContent)
+                    }
+                }
+
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(this@NewProfileActivity, "Berhasil import profil dari clipboard!", Toast.LENGTH_SHORT).show()
+                }
+                
+                launchProperties(profileId)
+            }
+        } catch (e: Exception) {
+            withContext(Dispatchers.Main) {
+                Toast.makeText(this@NewProfileActivity, "Gagal mengonversi link: ${e.message}", Toast.LENGTH_LONG).show()
             }
         }
     }
@@ -163,7 +223,8 @@ class NewProfileActivity : BaseActivity<NewProfileDesign>() {
             listOf(
                 ProfileProvider.File(self),
                 ProfileProvider.Url(self),
-                ProfileProvider.QR(self)
+                ProfileProvider.QR(self),
+                ProfileProvider.Clipboard(self)
             ) + providers
         }
     }
@@ -196,5 +257,4 @@ class NewProfileActivity : BaseActivity<NewProfileDesign>() {
             )
         }
     }
-
 }

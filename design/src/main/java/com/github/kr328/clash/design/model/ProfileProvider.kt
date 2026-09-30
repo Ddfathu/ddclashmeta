@@ -14,8 +14,6 @@ sealed class ProfileProvider {
             get() = context.getString(R.string.import_from_file)
         override val icon: Drawable?
             get() = context.getDrawableCompat(R.drawable.ic_baseline_attach_file)
-
-
     }
 
     class Url(private val context: Context) : ProfileProvider() {
@@ -35,6 +33,16 @@ sealed class ProfileProvider {
         override val icon: Drawable?
             get() = context.getDrawableCompat(R.drawable.baseline_qr_code_scanner)
     }
+
+    class Clipboard(private val context: Context) : ProfileProvider() {
+        override val name: String
+            get() = "Import from Clipboard"
+        override val summary: String
+            get() = "Auto-convert Vless / Vmess / Trojan"
+        override val icon: Drawable?
+            get() = context.getDrawableCompat(R.drawable.ic_baseline_assignment)
+    }
+
     class External(
         override val name: String,
         override val summary: String,
