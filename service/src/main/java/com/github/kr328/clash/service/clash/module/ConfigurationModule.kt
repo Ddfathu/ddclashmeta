@@ -88,7 +88,7 @@ class ConfigurationModule(service: Service) : Module<ConfigurationModule.LoadExc
                 content = if (content.contains("tcp-concurrent:")) {
                     content.replace(Regex("tcp-concurrent:\\s*(true|false)"), "tcp-concurrent: true")
                 } else {
-                    "tcp-concurrent: true\n$content"
+                    "tcp-concurrent: true\\n$content"
                 }
             }
 
@@ -97,16 +97,14 @@ class ConfigurationModule(service: Service) : Module<ConfigurationModule.LoadExc
                 content = if (content.contains("unified-delay:")) {
                     content.replace(Regex("unified-delay:\\s*(true|false)"), "unified-delay: true")
                 } else {
-                    "unified-delay: true\n$content"
+                    "unified-delay: true\\n$content"
                 }
             }
 
             // 3. Domain Sniffer
             if (store.enableSniffer) {
-                val snifferBlock = "sniffer:\n  enable: true\n  sniff:\n    TLS:\n      ports: [443, 8443]\n    HTTP:\n      ports: [80, 8080-8880]\n"
-                if (content.contains("sniffer:")) {
-                    content = content.replace(Regex("sniffer:\\s*\\n(\\s+.*\\n)*"), snifferBlock)
-                } else {
+                val snifferBlock = "sniffer:\\n  enable: true\\n  sniff:\\n    TLS:\\n      ports: [443, 8443]\\n    HTTP:\\n      ports: [80, 8080-8880]\\n"
+                if (!content.contains("sniffer:")) {
                     content = "$snifferBlock$content"
                 }
             }
@@ -127,25 +125,57 @@ class ConfigurationModule(service: Service) : Module<ConfigurationModule.LoadExc
                     for (item in rawList) {
                         val trimmed = item.trim()
                         if (trimmed.isNotEmpty()) {
-                            parsed.append("    - '").append(trimmed).append("'\n")
+                            parsed.append("    - \x27").append(trimmed).append("\x27\\n")
                         }
                     }
-
-                    filterYaml = "  fake-ip-filter:\n    - '+.stun.*'\n    - '+.msftconnecttest.com'\n    - '+.msftncsi.com'\n    - 'time.*.com'\n    - 'ntp.*.com'\n$parsed"
+                    filterYaml = "  fake-ip-filter:\\n    - \x27+.stun.*\x27\\n    - \x27+.msftconnecttest.com\x27\\n    - \x27+.msftncsi.com\x27\\n    - \x27time.*.com\x27\\n    - \x27ntp.*.com\x27\\n$parsed"
                 }
 
-                val dnsBlock = "dns:\n  enable: true\n  enhanced-mode: fake-ip\n  nameserver:\n    - $targetDoh\n    - 8.8.8.8\n  fallback:\n    - https://1.0.0.1/dns-query\n    - https://9.9.9.9/dns-query\n$filterYaml"
+                val dnsBlock = """
+dns:
+  enable: true
+  ipv6: false
+  enhanced-mode: fake-ip
+  fake-ip-range: 198.18.0.1/16
+  default-nameserver:
+    - 8.8.8.8
+    - 1.1.1.1
+  nameserver:
+    - $targetDoh
+    - 8.8.8.8
+    - 1.1.1.1
+  fallback:
+    - https://1.0.0.1/dns-query
+$filterYaml""".trimIndent()
 
+                // Hapus blok dns lama baris demi baris secara aman
                 if (content.contains("dns:")) {
-                    content = content.replace(Regex("dns:\\s*\\n(\\s+.*\\n)*"), dnsBlock)
+                    val lines = content.lines()
+                    val resultLines = mutableListOf<String>()
+                    var skipDns = false
+                    for (line in lines) {
+                        if (line.trim().startsWith("dns:")) {
+                            skipDns = true
+                            continue
+                        }
+                        if (skipDns) {
+                            if (line.isNotEmpty() && !line.startsWith(" ") && !line.startsWith("\\t")) {
+                                skipDns = false
+                                resultLines.add(line)
+                            }
+                        } else {
+                            resultLines.add(line)
+                        }
+                    }
+                    content = resultLines.joinToString("\\n") + "\\n\\n" + dnsBlock
                 } else {
-                    content = "$content\n$dnsBlock"
+                    content = "$content\\n\\n$dnsBlock"
                 }
             }
 
             configFile.writeText(content)
         } catch (_: Exception) {
-            // Abaikan kegagalan logging agar tidak memicu error compiler
+            // Abaikan kegagalan agar tidak crash
         }
     }
 }
