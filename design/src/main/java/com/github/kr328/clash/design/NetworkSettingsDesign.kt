@@ -15,6 +15,12 @@ import com.github.kr328.clash.service.model.AccessControlMode
 import com.github.kr328.clash.service.store.ServiceStore
 import kotlinx.coroutines.launch
 
+
+private val NonNullStringAdapter = object : NullableTextAdapter<String> {
+    override fun from(value: String): String? = value
+    override fun to(text: String?): String = text ?: ""
+}
+
 class NetworkSettingsDesign(
     context: Context,
     uiStore: UiStore,
@@ -80,7 +86,7 @@ class NetworkSettingsDesign(
 
             editableText(
                 value = srvStore::dohUrl,
-                adapter = NullableTextAdapter.String,
+                adapter = NonNullStringAdapter,
                 
                 title = R.string.doh_url,
             ) {
@@ -128,7 +134,7 @@ class NetworkSettingsDesign(
 
             editableText(
                 value = srvStore::customFakeIpFilter,
-                adapter = NullableTextAdapter.String,
+                adapter = NonNullStringAdapter,
                 
                 title = R.string.fake_ip_filter_list,
             ) {
