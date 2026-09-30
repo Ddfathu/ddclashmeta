@@ -9,9 +9,11 @@ plugins {
 }
 
 android {
-    namespace = "com.ddclash.meta"
+    // Biarkan namespace memakai package class aslinya agar R.layout/R.string terbaca
+    namespace = "com.github.kr328.clash"
 
     defaultConfig {
+        // Ini identitas APK resmi yang terpasang di Android
         applicationId = "com.ddclash.meta"
         versionCode = 20260930
         versionName = "1.0.0"
