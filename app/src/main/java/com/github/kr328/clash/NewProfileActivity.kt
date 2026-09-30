@@ -133,7 +133,10 @@ class NewProfileActivity : BaseActivity<NewProfileDesign>() {
             val yamlContent = ProxyLinkConverter.toClashYaml(text)
             
             withProfile {
-                val profileId = create(Profile.Type.File, "Imported-Nodes")
+                val targetName = "Quick / Clipboard"
+                val existingList = queryAll()
+                val existing = existingList.firstOrNull { it.name == targetName }
+                val profileId = existing?.id ?: create(Profile.Type.File, targetName)
                 val client = FilesClient(this@NewProfileActivity)
                 
                 withContext(Dispatchers.IO) {
@@ -150,7 +153,7 @@ class NewProfileActivity : BaseActivity<NewProfileDesign>() {
                 commit(profileId)
 
                 withContext(Dispatchers.Main) {
-                    Toast.makeText(this@NewProfileActivity, "Profil berhasil disimpan!", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this@NewProfileActivity, "Profil 'Quick / Clipboard' diperbarui!", Toast.LENGTH_SHORT).show()
                     finish()
                 }
             }
