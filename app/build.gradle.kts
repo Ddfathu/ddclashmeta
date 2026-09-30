@@ -8,6 +8,29 @@ plugins {
     id("com.android.application")
 }
 
+android {
+    namespace = "com.ddclash.meta"
+
+    defaultConfig {
+        applicationId = "com.ddclash.meta"
+        versionCode = 20260930
+        versionName = "1.0.0"
+    }
+
+    buildTypes {
+        release {
+            isMinifyEnabled = false
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
+        }
+        debug {
+            applicationIdSuffix = ""
+        }
+    }
+}
+
 dependencies {
     compileOnly(project(":hideapi"))
 
