@@ -8,14 +8,13 @@ import com.github.kr328.clash.service.clash.common.enqueueEvent
 import com.github.kr328.clash.service.clash.common.receiveBroadcast
 import com.github.kr328.clash.service.data.ImportedDao
 import com.github.kr328.clash.service.data.SelectionDao
-import com.github.kr328.clash.service.model.Profile
 import com.github.kr328.clash.service.store.ServiceStore
 import com.github.kr328.clash.service.util.importedDir
 import com.github.kr328.clash.service.util.sendProfileLoaded
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.selects.select
 import java.io.File
-import java.util.*
+import java.util.UUID
 
 class ConfigurationModule(service: BaseService) : Module<ConfigurationModule.LoadException>(service) {
     class LoadException(val message: String)
@@ -57,7 +56,8 @@ class ConfigurationModule(service: BaseService) : Module<ConfigurationModule.Loa
 
                 Clash.setAgeSecretKey(active.ageSecretKey?.takeIf { it.isNotBlank() })
 
-                val configFile = service.importedDir.resolve(active.uuid.toString())
+                val baseDir = service.importedDir
+                val configFile = File(baseDir, active.uuid.toString())
 
                 if (configFile.exists()) {
                     applyCustomTuning(configFile)
@@ -91,7 +91,7 @@ class ConfigurationModule(service: BaseService) : Module<ConfigurationModule.Loa
                 content = if (content.contains("tcp-concurrent:")) {
                     content.replace(Regex("tcp-concurrent:\\s*(true|false)"), "tcp-concurrent: true")
                 } else {
-                    "tcp-concurrent: true\n" + content
+                    "tcp-concurrent: true\n$content"
                 }
             }
 
@@ -100,72 +100,49 @@ class ConfigurationModule(service: BaseService) : Module<ConfigurationModule.Loa
                 content = if (content.contains("unified-delay:")) {
                     content.replace(Regex("unified-delay:\\s*(true|false)"), "unified-delay: true")
                 } else {
-                    "unified-delay: true\n" + content
+                    "unified-delay: true\n$content"
                 }
             }
 
             // 3. Domain Sniffer
             if (store.enableSniffer) {
-                val snifferBlock = """
-sniffer:
-  enable: true
-  sniff:
-    TLS:
-      ports: [443, 8443]
-    HTTP:
-      ports: [80, 8080-8880]
-"""
+                val snifferBlock = "sniffer:\n  enable: true\n  sniff:\n    TLS:\n      ports: [443, 8443]\n    HTTP:\n      ports: [80, 8080-8880]\n"
                 if (content.contains("sniffer:")) {
-                    content = content.replace(Regex("sniffer:\\s*\\n(\\s+.*\\n)*"), snifferBlock.trimStart() + "\n")
+                    content = content.replace(Regex("sniffer:\\s*\\n(\\s+.*\\n)*"), snifferBlock)
                 } else {
-                    content = snifferBlock.trimStart() + "\n" + content
+                    content = "$snifferBlock$content"
                 }
             }
 
             // 4. DNS Configuration (DoH + Custom Fake-IP Filter)
             if (store.enableDoh || store.enableFakeIpFilter) {
                 val targetDoh = if (store.enableDoh) {
-                    store.dohUrl.trim().ifBlank { "https://1.1.1.1/dns-query" }
+                    val url = store.dohUrl.trim()
+                    if (url.isBlank()) "https://1.1.1.1/dns-query" else url
                 } else {
                     "1.1.1.1"
                 }
 
                 var filterYaml = ""
                 if (store.enableFakeIpFilter) {
-                    val domains = store.customFakeIpFilter.split(",")
-                        .map { it.trim() }
-                        .filter { it.isNotBlank() }
-                        .joinToString("\n") { "    - '$it'" }
+                    val rawList = store.customFakeIpFilter.split(",")
+                    val parsed = StringBuilder()
+                    for (item in rawList) {
+                        val trimmed = item.trim()
+                        if (trimmed.isNotEmpty()) {
+                            parsed.append("    - '").append(trimmed).append("'\n")
+                        }
+                    }
 
-                    val baseFilters = """
-    - '+.stun.*'
-    - '+.msftconnecttest.com'
-    - '+.msftncsi.com'
-    - 'time.*.com'
-    - 'ntp.*.com'
-"""
-                    filterYaml = """
-  fake-ip-filter:
-$baseFilters
-$domains
-"""
+                    filterYaml = "  fake-ip-filter:\n    - '+.stun.*'\n    - '+.msftconnecttest.com'\n    - '+.msftncsi.com'\n    - 'time.*.com'\n    - 'ntp.*.com'\n$parsed"
                 }
 
-                val dnsBlock = """
-dns:
-  enable: true
-  enhanced-mode: fake-ip
-  nameserver:
-    - $targetDoh
-    - 8.8.8.8
-  fallback:
-    - https://1.0.0.1/dns-query
-    - https://9.9.9.9/dns-query$filterYaml
-"""
+                val dnsBlock = "dns:\n  enable: true\n  enhanced-mode: fake-ip\n  nameserver:\n    - $targetDoh\n    - 8.8.8.8\n  fallback:\n    - https://1.0.0.1/dns-query\n    - https://9.9.9.9/dns-query\n$filterYaml"
+
                 if (content.contains("dns:")) {
-                    content = content.replace(Regex("dns:\\s*\\n(\\s+.*\\n)*"), dnsBlock.trimStart() + "\n")
+                    content = content.replace(Regex("dns:\\s*\\n(\\s+.*\\n)*"), dnsBlock)
                 } else {
-                    content = content + "\n" + dnsBlock
+                    content = "$content\n$dnsBlock"
                 }
             }
 
