@@ -136,7 +136,7 @@ class NewProfileActivity : BaseActivity<NewProfileDesign>() {
                 val targetName = "Quick / Clipboard"
                 val existingList = queryAll()
                 val existing = existingList.firstOrNull { it.name == targetName }
-                val profileId = existing?.id ?: create(Profile.Type.File, targetName)
+                val profileId = existing?.uuid ?: create(Profile.Type.File, targetName)
                 val client = FilesClient(this@NewProfileActivity)
                 
                 withContext(Dispatchers.IO) {
