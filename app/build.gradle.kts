@@ -9,23 +9,15 @@ plugins {
 }
 
 android {
-    // Biarkan namespace memakai package class aslinya agar R.layout/R.string terbaca
     namespace = "com.github.kr328.clash"
 
     defaultConfig {
-        // Ini identitas APK resmi yang terpasang di Android
         applicationId = "com.ddclash.meta"
         versionCode = 20260930
         versionName = "1.0.0"
-
-        // Batasi NDK hanya memproses arm64-v8a agar build cepat dan ukuran kecil
-        ndk {
-            abiFilters.clear()
-            abiFilters.add("arm64-v8a")
-        }
     }
 
-    // Nonaktifkan APK universal & kunci ABI hanya untuk arm64-v8a
+    // Kunci ABI hanya memproses arm64-v8a lewat splits (tanpa ndk abiFilters agar tidak bentrok)
     splits {
         abi {
             isEnable = true
