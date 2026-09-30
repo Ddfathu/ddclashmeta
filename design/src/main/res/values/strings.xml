@@ -377,4 +377,20 @@
     <string name="fake_ip_filter_summary">Lewatkan domain penting langsung tanpa DNS palsu (anti kendala koneksi)</string>
     <string name="custom_fake_ip">Custom Domain Bypass Fake-IP</string>
     <string name="custom_fake_ip_summary">Pisahkan dengan koma (contoh: *.bca.co.id, *.grab.com)</string>
+
+    <string name="network_tuning_category">Network Tuning &amp; DNS</string>
+    <string name="enable_doh">DNS over HTTPS (DoH)</string>
+    <string name="enable_doh_summary">Enkripsi query DNS via HTTPS</string>
+    <string name="doh_url">DoH Server URL</string>
+    <string name="doh_url_summary">Contoh: https://1.1.1.1/dns-query</string>
+    <string name="tcp_concurrent">TCP Concurrent</string>
+    <string name="tcp_concurrent_summary">Meningkatkan kecepatan handshake koneksi TCP</string>
+    <string name="enable_sniffer">Domain Sniffer</string>
+    <string name="enable_sniffer_summary">Deteksi otomatis domain TLS &amp; HTTP</string>
+    <string name="unified_delay">Unified Delay</string>
+    <string name="unified_delay_summary">Perhitungan latency akurat tanpa overhead RTT</string>
+    <string name="enable_fake_ip_filter">Custom Fake-IP Filter</string>
+    <string name="enable_fake_ip_filter_summary">Bypass domain tertentu dari pool Fake-IP</string>
+    <string name="fake_ip_filter_list">Filter List Domain</string>
+    <string name="fake_ip_filter_list_summary">Pisahkan domain dengan tanda koma (,)</string>
 </resources>
