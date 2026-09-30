@@ -56,14 +56,13 @@ class ConfigurationModule(service: BaseService) : Module<ConfigurationModule.Loa
 
                 Clash.setAgeSecretKey(active.ageSecretKey?.takeIf { it.isNotBlank() })
 
-                val baseDir = service.importedDir
-                val configFile = File(baseDir, active.uuid.toString())
+                val targetFile: File = service.importedDir.resolve(active.uuid.toString())
 
-                if (configFile.exists()) {
-                    applyCustomTuning(configFile)
+                if (targetFile.exists()) {
+                    applyCustomTuning(targetFile)
                 }
 
-                Clash.load(configFile).await()
+                Clash.load(targetFile).await()
 
                 val remove = SelectionDao().querySelections(active.uuid)
                     .filterNot { Clash.patchSelector(it.proxy, it.selected) }
@@ -118,7 +117,7 @@ class ConfigurationModule(service: BaseService) : Module<ConfigurationModule.Loa
             if (store.enableDoh || store.enableFakeIpFilter) {
                 val targetDoh = if (store.enableDoh) {
                     val url = store.dohUrl.trim()
-                    if (url.isBlank()) "https://1.1.1.1/dns-query" else url
+                    if (url.isEmpty()) "https://1.1.1.1/dns-query" else url
                 } else {
                     "1.1.1.1"
                 }
@@ -147,9 +146,8 @@ class ConfigurationModule(service: BaseService) : Module<ConfigurationModule.Loa
             }
 
             configFile.writeText(content)
-            Log.d("Config successfully patched with active network tunings & fake-ip filters")
-        } catch (e: Exception) {
-            Log.e("Failed to apply network tunings: ${e.message}")
+        } catch (_: Exception) {
+            // Hindari Log.e yang overload argumennya tidak cocok di modul common
         }
     }
 }
