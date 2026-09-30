@@ -13,43 +13,90 @@ object ProxyLinkConverter {
         return t.contains("vmess://") || t.contains("vless://") || t.contains("trojan://")
     }
 
-    fun toClashYaml(rawText: String): String {
+    fun parseNodes(rawText: String, startIndex: Int = 1): List<Pair<String, String>> {
         val lines = rawText.lines().map { it.trim() }.filter { it.isNotEmpty() }
-        val proxies = mutableListOf<String>()
-        val proxyNames = mutableListOf<String>()
+        val result = mutableListOf<Pair<String, String>>()
+        var idx = startIndex
 
-        var index = 1
         for (line in lines) {
             try {
-                if (line.startsWith("vmess://", ignoreCase = true)) {
-                    val p = parseVmess(line, index)
-                    if (p != null) {
-                        proxies.add(p.first)
-                        proxyNames.add(p.second)
-                        index++
+                when {
+                    line.startsWith("vmess://", ignoreCase = true) -> {
+                        parseVmess(line, idx)?.let { result.add(it); idx++ }
                     }
-                } else if (line.startsWith("vless://", ignoreCase = true)) {
-                    val p = parseVless(line, index)
-                    if (p != null) {
-                        proxies.add(p.first)
-                        proxyNames.add(p.second)
-                        index++
+                    line.startsWith("vless://", ignoreCase = true) -> {
+                        parseVless(line, idx)?.let { result.add(it); idx++ }
                     }
-                } else if (line.startsWith("trojan://", ignoreCase = true)) {
-                    val p = parseTrojan(line, index)
-                    if (p != null) {
-                        proxies.add(p.first)
-                        proxyNames.add(p.second)
-                        index++
+                    line.startsWith("trojan://", ignoreCase = true) -> {
+                        parseTrojan(line, idx)?.let { result.add(it); idx++ }
                     }
                 }
-            } catch (_: Exception) {}
+            } catch (e: Exception) {}
         }
+        return result
+    }
 
-        if (proxies.isEmpty()) {
+    fun appendOrGenerate(existingContent: String?, rawLinks: String): String {
+        val newNodes = parseNodes(rawLinks)
+        if (newNodes.isEmpty()) {
             throw IllegalArgumentException("Tidak ditemukan link proxy yang valid")
         }
 
+        val existing = existingContent?.trim().orEmpty()
+        if (existing.isEmpty() || !existing.contains("proxies:")) {
+            return generateFullYaml(newNodes)
+        }
+
+        val lines = existing.lines().toMutableList()
+        val finalLines = mutableListOf<String>()
+
+        var inProxies = false
+        var proxiesAppended = false
+
+        for (i in lines.indices) {
+            val line = lines[i]
+
+            if (line.trim().startsWith("proxies:")) {
+                inProxies = true
+                finalLines.add(line)
+                continue
+            }
+
+            if (inProxies && (line.startsWith("proxy-groups:") || line.startsWith("dns:") || line.startsWith("rules:"))) {
+                if (!proxiesAppended) {
+                    newNodes.forEach { finalLines.add(it.first.trimEnd()) }
+                    proxiesAppended = true
+                }
+                inProxies = false
+            }
+
+            if (line.contains("name: PROXIES")) {
+                finalLines.add(line)
+                var j = i + 1
+                while (j < lines.size && !lines[j].trim().startsWith("proxies:")) {
+                    finalLines.add(lines[j])
+                    j++
+                }
+                if (j < lines.size && lines[j].trim().startsWith("proxies:")) {
+                    finalLines.add(lines[j])
+                    newNodes.forEach {
+                        finalLines.add("      - \"${it.second}\"")
+                    }
+                }
+                continue
+            }
+
+            finalLines.add(line)
+        }
+
+        if (!proxiesAppended) {
+            newNodes.forEach { finalLines.add(it.first.trimEnd()) }
+        }
+
+        return finalLines.joinToString("\n")
+    }
+
+    private fun generateFullYaml(nodes: List<Pair<String, String>>): String {
         val sb = StringBuilder()
         sb.appendLine("port: 7890")
         sb.appendLine("socks-port: 7891")
@@ -59,16 +106,18 @@ object ProxyLinkConverter {
         sb.appendLine("ipv6: false")
         sb.appendLine()
         sb.appendLine("proxies:")
-        proxies.forEach { sb.append(it) }
+        nodes.forEach { sb.append(it.first) }
         sb.appendLine()
         sb.appendLine("proxy-groups:")
         sb.appendLine("  - name: PROXIES")
         sb.appendLine("    type: select")
+        sb.appendLine("    url: \"https://www.google.com/generate_204\"")
+        sb.appendLine("    interval: 300")
         sb.appendLine("    proxies:")
-        proxyNames.forEach { sb.appendLine("      - \"$it\"") }
+        nodes.forEach { sb.appendLine("      - \"${it.second}\"") }
         sb.appendLine("      - DIRECT")
         sb.appendLine()
-                sb.appendLine("dns:")
+        sb.appendLine("dns:")
         sb.appendLine("  enable: true")
         sb.appendLine("  ipv6: false")
         sb.appendLine("  enhanced-mode: fake-ip")
@@ -175,6 +224,9 @@ object ProxyLinkConverter {
         val fragment = uri.fragment ?: "trojan-$index"
         val name = URLDecoder.decode(fragment, "UTF-8").replace("\"", "")
         val sni = uri.getQueryParameter("sni") ?: server
+        val type = uri.getQueryParameter("type") ?: "tcp"
+        val host = uri.getQueryParameter("host") ?: ""
+        val path = uri.getQueryParameter("path") ?: "/"
 
         val sb = StringBuilder()
         sb.appendLine("  - name: \"$name\"")
@@ -185,6 +237,15 @@ object ProxyLinkConverter {
         sb.appendLine("    udp: true")
         sb.appendLine("    skip-cert-verify: true")
         sb.appendLine("    sni: $sni")
+        sb.appendLine("    network: $type")
+        if (type == "ws") {
+            sb.appendLine("    ws-opts:")
+            sb.appendLine("      path: \"$path\"")
+            if (host.isNotEmpty()) {
+                sb.appendLine("      headers:")
+                sb.appendLine("        Host: \"$host\"")
+            }
+        }
         return Pair(sb.toString(), name)
     }
 }
