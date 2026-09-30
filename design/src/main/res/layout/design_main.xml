@@ -12,6 +12,12 @@
             name="forwarded"
             type="String" />
         <variable
+            name="downloadTraffic"
+            type="String" />
+        <variable
+            name="uploadTraffic"
+            type="String" />
+        <variable
             name="mode"
             type="String" />
         <variable
@@ -84,7 +90,6 @@
                             android:textStyle="bold" />
                     </LinearLayout>
 
-                    <!-- Tombol About Ditaruh di Pojok Atas Kanan -->
                     <ImageView
                         android:layout_width="40dp"
                         android:layout_height="40dp"
@@ -99,7 +104,7 @@
                         android:tint="#7C4DFF" />
                 </RelativeLayout>
 
-                <!-- KARTU HERO SPEEDOMETER & DATA USAGE (MODERN JAGOAN) -->
+                <!-- KARTU HERO SPEEDOMETER & DATA USAGE -->
                 <androidx.cardview.widget.CardView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -150,17 +155,17 @@
                         <View
                             android:layout_width="match_parent"
                             android:layout_height="1dp"
-                            android:layout_marginVertical="16dp"
+                            android:layout_marginVertical="14dp"
                             android:background="#F0F0F5" />
 
-                        <!-- Grid 2 Kolom: KIRI (DOWNLOAD) | KANAN (UPLOAD) -->
+                        <!-- Baris 1: DOWNLOAD & UPLOAD -->
                         <LinearLayout
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:gravity="center"
                             android:orientation="horizontal">
 
-                            <!-- Kolom Download -->
+                            <!-- DOWNLOAD -->
                             <LinearLayout
                                 android:layout_width="0dp"
                                 android:layout_height="wrap_content"
@@ -175,16 +180,16 @@
                                     android:orientation="horizontal">
 
                                     <ImageView
-                                        android:layout_width="18dp"
-                                        android:layout_height="18dp"
+                                        android:layout_width="16dp"
+                                        android:layout_height="16dp"
                                         android:src="@drawable/ic_baseline_cloud_download"
                                         android:tint="#00C853" />
 
                                     <TextView
                                         android:layout_width="wrap_content"
                                         android:layout_height="wrap_content"
-                                        android:layout_marginStart="6dp"
-                                        android:text="TRAFFIC"
+                                        android:layout_marginStart="5dp"
+                                        android:text="DOWNLOAD"
                                         android:textColor="#9E9E9E"
                                         android:textSize="11sp"
                                         android:textStyle="bold" />
@@ -193,28 +198,19 @@
                                 <TextView
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
-                                    android:layout_marginTop="8dp"
-                                    android:text="@{clashRunning ? (forwarded != null ? forwarded : `0 B`) : `0.00 B`}"
+                                    android:layout_marginTop="6dp"
+                                    android:text="@{clashRunning ? (downloadTraffic != null ? downloadTraffic : `0 B`) : `0.00 B`}"
                                     android:textColor="#212121"
-                                    android:textSize="17sp"
+                                    android:textSize="16sp"
                                     android:textStyle="bold" />
-
-                                <TextView
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:layout_marginTop="2dp"
-                                    android:text="Total Transferred"
-                                    android:textColor="#BDBDBD"
-                                    android:textSize="11sp" />
                             </LinearLayout>
 
-                            <!-- Garis Vertikal Tengah -->
                             <View
                                 android:layout_width="1dp"
-                                android:layout_height="48dp"
+                                android:layout_height="40dp"
                                 android:background="#F0F0F5" />
 
-                            <!-- Kolom Upload / Mode -->
+                            <!-- UPLOAD -->
                             <LinearLayout
                                 android:layout_width="0dp"
                                 android:layout_height="wrap_content"
@@ -229,16 +225,16 @@
                                     android:orientation="horizontal">
 
                                     <ImageView
-                                        android:layout_width="18dp"
-                                        android:layout_height="18dp"
+                                        android:layout_width="16dp"
+                                        android:layout_height="16dp"
                                         android:src="@drawable/ic_baseline_cloud_upload"
                                         android:tint="#7C4DFF" />
 
                                     <TextView
                                         android:layout_width="wrap_content"
                                         android:layout_height="wrap_content"
-                                        android:layout_marginStart="6dp"
-                                        android:text="ROUTING"
+                                        android:layout_marginStart="5dp"
+                                        android:text="UPLOAD"
                                         android:textColor="#9E9E9E"
                                         android:textSize="11sp"
                                         android:textStyle="bold" />
@@ -247,19 +243,83 @@
                                 <TextView
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
-                                    android:layout_marginTop="8dp"
-                                    android:text="@{clashRunning ? (mode != null ? mode : `Rule`) : `-`}"
-                                    android:textColor="#311B92"
-                                    android:textSize="17sp"
+                                    android:layout_marginTop="6dp"
+                                    android:text="@{clashRunning ? (uploadTraffic != null ? uploadTraffic : `0 B`) : `0.00 B`}"
+                                    android:textColor="#212121"
+                                    android:textSize="16sp"
+                                    android:textStyle="bold" />
+                            </LinearLayout>
+                        </LinearLayout>
+
+                        <!-- Garis Pemisah Baris 2 -->
+                        <View
+                            android:layout_width="match_parent"
+                            android:layout_height="1dp"
+                            android:layout_marginVertical="12dp"
+                            android:background="#F0F0F5" />
+
+                        <!-- Baris 2: TOTAL TRAFFIC & MODE -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:gravity="center"
+                            android:orientation="horizontal">
+
+                            <!-- TOTAL -->
+                            <LinearLayout
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:gravity="center_horizontal"
+                                android:orientation="vertical">
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="TOTAL TRANSFERRED"
+                                    android:textColor="#9E9E9E"
+                                    android:textSize="10sp"
                                     android:textStyle="bold" />
 
                                 <TextView
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
-                                    android:layout_marginTop="2dp"
-                                    android:text="Active Core Mode"
-                                    android:textColor="#BDBDBD"
-                                    android:textSize="11sp" />
+                                    android:layout_marginTop="4dp"
+                                    android:text="@{clashRunning ? (forwarded != null ? forwarded : `0 B`) : `0.00 B`}"
+                                    android:textColor="#311B92"
+                                    android:textSize="14sp"
+                                    android:textStyle="bold" />
+                            </LinearLayout>
+
+                            <View
+                                android:layout_width="1dp"
+                                android:layout_height="32dp"
+                                android:background="#F0F0F5" />
+
+                            <!-- ROUTING MODE -->
+                            <LinearLayout
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:gravity="center_horizontal"
+                                android:orientation="vertical">
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="ROUTING MODE"
+                                    android:textColor="#9E9E9E"
+                                    android:textSize="10sp"
+                                    android:textStyle="bold" />
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginTop="4dp"
+                                    android:text="@{clashRunning ? (mode != null ? mode : `Rule`) : `-`}"
+                                    android:textColor="#311B92"
+                                    android:textSize="14sp"
+                                    android:textStyle="bold" />
                             </LinearLayout>
                         </LinearLayout>
 
