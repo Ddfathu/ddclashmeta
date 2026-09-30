@@ -40,6 +40,8 @@ class NetworkSettingsDesign(
 
         val screen = preferenceScreen(context) {
             val vpnDependencies: MutableList<Preference> = mutableListOf()
+            val dohDependencies: MutableList<Preference> = mutableListOf()
+            val fakeIpDependencies: MutableList<Preference> = mutableListOf()
 
             val vpn = switch(
                 value = uiStore::enableVpn,
@@ -51,9 +53,86 @@ class NetworkSettingsDesign(
                     vpnDependencies.forEach {
                         it.enabled = uiStore.enableVpn
                     }
+                    dohDependencies.forEach {
+                        it.enabled = uiStore.enableVpn && srvStore.enableDoh
+                    }
+                    fakeIpDependencies.forEach {
+                        it.enabled = uiStore.enableVpn && srvStore.enableFakeIpFilter
+                    }
                 }
             }
 
+            // KATEGORI 1: OPTIMASI PERFORMA JARINGAN
+            category(R.string.network_tuning_category)
+
+            val dohSwitch = switch(
+                value = srvStore::enableDoh,
+                title = R.string.enable_doh,
+                summary = R.string.enable_doh_summary,
+                configure = vpnDependencies::add,
+            ) {
+                listener = OnChangedListener {
+                    dohDependencies.forEach {
+                        it.enabled = srvStore.enableDoh
+                    }
+                }
+            }
+
+            textField(
+                value = srvStore::dohUrl,
+                title = R.string.doh_url,
+                summary = R.string.doh_url_summary,
+                configure = {
+                    vpnDependencies.add(it)
+                    dohDependencies.add(it)
+                }
+            )
+
+            switch(
+                value = srvStore::tcpConcurrent,
+                title = R.string.tcp_concurrent,
+                summary = R.string.tcp_concurrent_summary,
+                configure = vpnDependencies::add,
+            )
+
+            switch(
+                value = srvStore::enableSniffer,
+                title = R.string.enable_sniffer,
+                summary = R.string.enable_sniffer_summary,
+                configure = vpnDependencies::add,
+            )
+
+            switch(
+                value = srvStore::unifiedDelay,
+                title = R.string.unified_delay,
+                summary = R.string.unified_delay_summary,
+                configure = vpnDependencies::add,
+            )
+
+            val fakeIpSwitch = switch(
+                value = srvStore::enableFakeIpFilter,
+                title = R.string.fake_ip_filter,
+                summary = R.string.fake_ip_filter_summary,
+                configure = vpnDependencies::add,
+            ) {
+                listener = OnChangedListener {
+                    fakeIpDependencies.forEach {
+                        it.enabled = srvStore.enableFakeIpFilter
+                    }
+                }
+            }
+
+            textField(
+                value = srvStore::customFakeIpFilter,
+                title = R.string.custom_fake_ip,
+                summary = R.string.custom_fake_ip_summary,
+                configure = {
+                    vpnDependencies.add(it)
+                    fakeIpDependencies.add(it)
+                }
+            )
+
+            // KATEGORI 2: VPN SERVICE BAWAAN
             category(R.string.vpn_service_options)
 
             switch(
@@ -140,6 +219,8 @@ class NetworkSettingsDesign(
                 }
             } else {
                 vpn.listener?.onChanged()
+                dohSwitch.listener?.onChanged()
+                fakeIpSwitch.listener?.onChanged()
             }
         }
 

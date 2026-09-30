@@ -371,4 +371,10 @@
     <string name="shortcut_start_long">Start DDclash service</string>
     <string name="shortcut_stop_short">Stop DDclash</string>
     <string name="shortcut_stop_long">Stop DDclash service</string>
+    <string name="doh_url">Custom DoH URL</string>
+    <string name="doh_url_summary">Contoh: https://1.1.1.1/dns-query atau NextDNS</string>
+    <string name="fake_ip_filter">Bypass Fake-IP (Game / Bank / Ojol)</string>
+    <string name="fake_ip_filter_summary">Lewatkan domain penting langsung tanpa DNS palsu (anti kendala koneksi)</string>
+    <string name="custom_fake_ip">Custom Domain Bypass Fake-IP</string>
+    <string name="custom_fake_ip_summary">Pisahkan dengan koma (contoh: *.bca.co.id, *.grab.com)</string>
 </resources>

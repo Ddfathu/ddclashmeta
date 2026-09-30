@@ -59,7 +59,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="12dp"
-                    android:layout_marginBottom="24dp">
+                    android:layout_marginBottom="20dp">
 
                     <LinearLayout
                         android:layout_width="wrap_content"
@@ -99,44 +99,170 @@
                         android:tint="#7C4DFF" />
                 </RelativeLayout>
 
-                <!-- Panel Status Trafik / Info Terkoneksi -->
+                <!-- KARTU HERO SPEEDOMETER & DATA USAGE (MODERN JAGOAN) -->
                 <androidx.cardview.widget.CardView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginBottom="16dp"
                     app:cardBackgroundColor="#FFFFFF"
-                    app:cardCornerRadius="18dp"
-                    app:cardElevation="2dp">
+                    app:cardCornerRadius="22dp"
+                    app:cardElevation="3dp">
 
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:gravity="center"
                         android:orientation="vertical"
-                        android:padding="24dp">
+                        android:padding="20dp">
 
-                        <ImageView
-                            android:layout_width="56dp"
-                            android:layout_height="56dp"
-                            android:src="@{clashRunning ? @drawable/ic_outline_check_circle : @drawable/ic_outline_not_interested}"
-                            android:tint="@{clashRunning ? 0xFF00C853 : 0xFFB0BEC5}" />
-
-                        <TextView
-                            android:layout_width="wrap_content"
+                        <!-- Baris Atas: Status Indikator -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:layout_marginTop="12dp"
-                            android:text="@{clashRunning ? @string/running : @string/stopped}"
-                            android:textColor="#212121"
-                            android:textSize="18sp"
-                            android:textStyle="bold" />
+                            android:gravity="center_vertical"
+                            android:orientation="horizontal">
 
-                        <TextView
-                            android:layout_width="wrap_content"
+                            <View
+                                android:layout_width="10dp"
+                                android:layout_height="10dp"
+                                android:background="@{clashRunning ? @drawable/ic_outline_check_circle : @drawable/ic_outline_not_interested}"
+                                android:backgroundTint="@{clashRunning ? 0xFF00E676 : 0xFFB0BEC5}" />
+
+                            <TextView
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_marginStart="8dp"
+                                android:layout_weight="1"
+                                android:letterSpacing="0.05"
+                                android:text="@{clashRunning ? @string/running : @string/stopped}"
+                                android:textColor="@{clashRunning ? 0xFF00C853 : 0xFF78909C}"
+                                android:textSize="14sp"
+                                android:textStyle="bold" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="@{clashRunning ? profileName : @string/tap_to_start}"
+                                android:textColor="#9E9E9E"
+                                android:textSize="12sp" />
+                        </LinearLayout>
+
+                        <!-- Garis Pemisah Halus -->
+                        <View
+                            android:layout_width="match_parent"
+                            android:layout_height="1dp"
+                            android:layout_marginVertical="16dp"
+                            android:background="#F0F0F5" />
+
+                        <!-- Grid 2 Kolom: KIRI (DOWNLOAD) | KANAN (UPLOAD) -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:layout_marginTop="4dp"
-                            android:text="@{clashRunning ? @string/format_traffic_forwarded(forwarded) : @string/tap_to_start}"
-                            android:textColor="#757575"
-                            android:textSize="13sp" />
+                            android:gravity="center"
+                            android:orientation="horizontal">
+
+                            <!-- Kolom Download -->
+                            <LinearLayout
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:gravity="center_horizontal"
+                                android:orientation="vertical">
+
+                                <LinearLayout
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:gravity="center_vertical"
+                                    android:orientation="horizontal">
+
+                                    <ImageView
+                                        android:layout_width="18dp"
+                                        android:layout_height="18dp"
+                                        android:src="@drawable/ic_baseline_cloud_download"
+                                        android:tint="#00C853" />
+
+                                    <TextView
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:layout_marginStart="6dp"
+                                        android:text="DOWNLOAD"
+                                        android:textColor="#9E9E9E"
+                                        android:textSize="11sp"
+                                        android:textStyle="bold" />
+                                </LinearLayout>
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginTop="8dp"
+                                    android:text="@{clashRunning ? (forwarded != null ? forwarded : `0 B`) : `0.00 B`}"
+                                    android:textColor="#212121"
+                                    android:textSize="17sp"
+                                    android:textStyle="bold" />
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginTop="2dp"
+                                    android:text="Total Transferred"
+                                    android:textColor="#BDBDBD"
+                                    android:textSize="11sp" />
+                            </LinearLayout>
+
+                            <!-- Garis Vertikal Tengah -->
+                            <View
+                                android:layout_width="1dp"
+                                android:layout_height="48dp"
+                                android:background="#F0F0F5" />
+
+                            <!-- Kolom Upload / Mode -->
+                            <LinearLayout
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:gravity="center_horizontal"
+                                android:orientation="vertical">
+
+                                <LinearLayout
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:gravity="center_vertical"
+                                    android:orientation="horizontal">
+
+                                    <ImageView
+                                        android:layout_width="18dp"
+                                        android:layout_height="18dp"
+                                        android:src="@drawable/ic_baseline_cloud_upload"
+                                        android:tint="#7C4DFF" />
+
+                                    <TextView
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:layout_marginStart="6dp"
+                                        android:text="ROUTING"
+                                        android:textColor="#9E9E9E"
+                                        android:textSize="11sp"
+                                        android:textStyle="bold" />
+                                </LinearLayout>
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginTop="8dp"
+                                    android:text="@{clashRunning ? (mode != null ? mode : `Rule`) : `-`}"
+                                    android:textColor="#311B92"
+                                    android:textSize="17sp"
+                                    android:textStyle="bold" />
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginTop="2dp"
+                                    android:text="Active Core Mode"
+                                    android:textColor="#BDBDBD"
+                                    android:textSize="11sp" />
+                            </LinearLayout>
+                        </LinearLayout>
+
                     </LinearLayout>
                 </androidx.cardview.widget.CardView>
 
@@ -289,7 +415,7 @@
                         android:textSize="11sp" />
                 </LinearLayout>
 
-                <!-- 5. KANAN 2: PROFILE (Sesuai Permintaan di Bawah Kanan) -->
+                <!-- 5. KANAN 2: PROFILE -->
                 <LinearLayout
                     android:layout_width="0dp"
                     android:layout_height="match_parent"

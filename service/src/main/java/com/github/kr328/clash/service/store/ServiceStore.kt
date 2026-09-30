@@ -41,6 +41,42 @@ class ServiceStore(context: Context) {
         defaultValue = true
     )
 
+    // FITUR OPTIMASI JARINGAN (Default: False / Mati Polosan)
+    var enableDoh by store.boolean(
+        key = "enable_doh",
+        defaultValue = false
+    )
+
+    var dohUrl by store.string(
+        key = "doh_url",
+        defaultValue = "https://1.1.1.1/dns-query"
+    )
+
+    var tcpConcurrent by store.boolean(
+        key = "tcp_concurrent",
+        defaultValue = false
+    )
+
+    var enableSniffer by store.boolean(
+        key = "enable_sniffer",
+        defaultValue = false
+    )
+
+    var unifiedDelay by store.boolean(
+        key = "unified_delay",
+        defaultValue = false
+    )
+
+    var enableFakeIpFilter by store.boolean(
+        key = "enable_fake_ip_filter",
+        defaultValue = false
+    )
+
+    var customFakeIpFilter by store.string(
+        key = "custom_fake_ip_filter",
+        defaultValue = "*.bca.co.id, *.bri.co.id, *.mandiri.co.id, *.grab.com, *.gojek.com, *.mobilelegends.com"
+    )
+
     var systemProxy by store.boolean(
         key = "system_proxy",
         defaultValue = true
