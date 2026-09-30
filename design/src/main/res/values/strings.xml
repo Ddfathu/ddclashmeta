@@ -277,7 +277,7 @@
 
     <string name="files">Files</string>
     <string name="browse_files">Browse Files</string>
-    <string name="browse_configuration_providers"><![CDATA[Browse configuration & providers]]></string>
+    <string name="browse_configuration_providers"><![CDATA[Browse configuration &amp; providers]]></string>
     <string name="rename">Rename</string>
     <string name="file_name">File Name</string>
     <string name="invalid_file_name">Invalid file name</string>
@@ -389,6 +389,4 @@
     <string name="enable_fake_ip_filter_summary">Bypass domain tertentu dari pool Fake-IP</string>
     <string name="fake_ip_filter_list">Filter List Domain</string>
     <string name="fake_ip_filter_list_summary">Pisahkan domain dengan tanda koma (,)</string>
-    <string name="tcp_concurrent">TCP Concurrent</string>
-    <string name="unified_delay">Unified Delay</string>
 </resources>
