@@ -25,9 +25,8 @@
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:clipToPadding="false"
-            android:paddingHorizontal="8dp"
-            android:paddingTop="@{(float) self.surface.insets.top + @dimen/toolbar_height + 8}"
-            android:paddingBottom="@{self.surface.insets.bottom + 8}" />
+            android:paddingTop="@{(float) self.surface.insets.top + @dimen/toolbar_height}"
+            android:paddingBottom="@{self.surface.insets.bottom}" />
 
         <!-- Toolbar Atas Floating -->
         <com.github.kr328.clash.design.view.ActivityBarLayout
@@ -35,13 +34,13 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:background="#FFFFFF"
-            android:elevation="4dp"
+            android:elevation="2dp"
             android:paddingTop="@{self.surface.insets.top}">
 
             <RelativeLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:paddingEnd="16dp">
+                android:paddingEnd="@dimen/item_tailing_margin">
 
                 <include
                     layout="@layout/common_activity_bar"
@@ -68,48 +67,48 @@
 
                         <!-- Tombol Hapus Log -->
                         <ImageView
-                            android:layout_width="40dp"
-                            android:layout_height="40dp"
-                            android:layout_marginStart="8dp"
+                            android:layout_width="@dimen/item_tailing_component_size"
+                            android:layout_height="@dimen/item_tailing_component_size"
+                            android:layout_marginStart="@dimen/item_tailing_margin"
                             android:background="?attr/selectableItemBackgroundBorderless"
                             android:clickable="true"
                             android:contentDescription="@string/delete"
                             android:focusable="true"
                             android:onClick="@{() -> self.requests.offer(Request.Delete)}"
-                            android:padding="8dp"
+                            android:padding="@dimen/toolbar_image_action_padding"
                             android:src="@drawable/ic_baseline_delete"
-                            app:tint="#7C4DFF" />
+                            android:tint="#7C4DFF" />
 
                         <!-- Tombol Export Log -->
                         <ImageView
-                            android:layout_width="40dp"
-                            android:layout_height="40dp"
-                            android:layout_marginStart="8dp"
+                            android:layout_width="@dimen/item_tailing_component_size"
+                            android:layout_height="@dimen/item_tailing_component_size"
+                            android:layout_marginStart="@dimen/item_tailing_margin"
                             android:background="?attr/selectableItemBackgroundBorderless"
                             android:clickable="true"
                             android:contentDescription="@string/export"
                             android:focusable="true"
                             android:onClick="@{() -> self.requests.offer(Request.Export)}"
-                            android:padding="8dp"
+                            android:padding="@dimen/toolbar_image_action_padding"
                             android:src="@drawable/ic_baseline_publish"
-                            app:tint="#7C4DFF" />
+                            android:tint="#7C4DFF" />
                     </LinearLayout>
 
                     <!-- Tombol Stop Streaming Log -->
                     <ImageView
-                        android:layout_width="40dp"
-                        android:layout_height="40dp"
+                        android:layout_width="@dimen/item_tailing_component_size"
+                        android:layout_height="@dimen/item_tailing_component_size"
                         android:layout_gravity="end"
-                        android:layout_marginStart="8dp"
+                        android:layout_marginStart="@dimen/item_tailing_margin"
                         android:background="?attr/selectableItemBackgroundBorderless"
                         android:clickable="true"
                         android:contentDescription="@string/close"
                         android:focusable="true"
                         android:onClick="@{() -> self.requests.offer(Request.Close)}"
-                        android:padding="8dp"
+                        android:padding="@dimen/toolbar_image_action_padding"
                         android:src="@drawable/ic_baseline_stop"
-                        android:visibility="@{streaming ? View.VISIBLE : View.GONE}"
-                        app:tint="#D50000" />
+                        android:tint="#D50000"
+                        android:visibility="@{streaming ? View.VISIBLE : View.GONE}" />
                 </FrameLayout>
 
             </RelativeLayout>

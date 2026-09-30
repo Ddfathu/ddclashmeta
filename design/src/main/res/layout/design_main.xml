@@ -38,11 +38,10 @@
         android:paddingStart="@{self.surface.insets.start}"
         android:paddingEnd="@{self.surface.insets.end}">
 
-        <!-- Konten Halaman Dashboard yang Bisa Di-scroll -->
         <ScrollView
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:layout_marginBottom="72dp"
+            android:layout_marginBottom="64dp"
             android:scrollbars="none">
 
             <LinearLayout
@@ -60,101 +59,88 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:gravity="center_vertical"
-                    android:paddingVertical="12dp"
+                    android:minHeight="@dimen/main_top_banner_height"
                     android:orientation="horizontal">
 
                     <FrameLayout
-                        android:layout_width="44dp"
-                        android:layout_height="44dp"
-                        android:background="@drawable/ic_clash"
-                        android:backgroundTint="#7C4DFF" />
+                        android:layout_width="@dimen/large_item_header_layout_size"
+                        android:layout_height="@dimen/large_item_header_layout_size">
+
+                        <View
+                            android:layout_width="@dimen/main_logo_size"
+                            android:layout_height="@dimen/main_logo_size"
+                            android:layout_gravity="center"
+                            android:background="@drawable/ic_clash" />
+                    </FrameLayout>
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginStart="12dp"
                         android:text="@string/application_name"
-                        android:textColor="#2E1A47"
+                        android:textColor="#311B92"
                         android:textStyle="bold"
                         android:textAppearance="@style/TextAppearance.MaterialComponents.Headline6" />
                 </LinearLayout>
 
-                <!-- KARTU UTAMA: Status Start / Stop -->
+                <!-- Tombol Status Start / Stop -->
                 <com.github.kr328.clash.design.view.LargeActionCard
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    android:layout_marginBottom="8dp"
+                    android:layout_marginVertical="@dimen/main_card_margin_vertical"
                     android:onClick="@{() -> self.request(Request.ToggleStatus)}"
                     android:theme="@style/AppThemeDark"
-                    app:cardBackgroundColor="@{clashRunning ? #7C4DFF : #311B92}"
-                    app:cardCornerRadius="18dp"
-                    app:cardElevation="3dp"
+                    app:cardBackgroundColor="@{clashRunning ? 0xFF7C4DFF : 0xFF512DA8}"
                     app:icon="@{clashRunning ? @drawable/ic_outline_check_circle : @drawable/ic_outline_not_interested}"
                     app:subtext="@{clashRunning ? @string/format_traffic_forwarded(forwarded) : @string/tap_to_start}"
                     app:text="@{clashRunning ? @string/running : @string/stopped}">
                     <requestFocus />
                 </com.github.kr328.clash.design.view.LargeActionCard>
 
-                <!-- KARTU PROFIL (Kotak Bersih Bergaris Tepi) -->
+                <!-- Menu Proxy -->
                 <com.github.kr328.clash.design.view.LargeActionCard
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginVertical="6dp"
-                    android:onClick="@{() -> self.request(Request.OpenProfiles)}"
-                    app:cardBackgroundColor="#FFFFFF"
-                    app:cardCornerRadius="16dp"
-                    app:cardElevation="1dp"
-                    app:strokeColor="#D1C4E9"
-                    app:strokeWidth="1dp"
-                    app:icon="@drawable/ic_baseline_view_list"
-                    app:iconTint="#7C4DFF"
-                    app:subtext="@{profileName != null ? @string/format_profile_activated(profileName) : @string/not_selected}"
-                    app:text="@string/profile" />
-
-                <!-- KARTU PROXY (Muncul Ketika Service Aktif) -->
-                <com.github.kr328.clash.design.view.LargeActionCard
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginVertical="6dp"
+                    android:layout_marginVertical="@dimen/main_card_margin_vertical"
                     android:onClick="@{() -> self.request(Request.OpenProxy)}"
                     android:visibility="@{clashRunning ? View.VISIBLE : View.GONE}"
-                    app:cardBackgroundColor="#FFFFFF"
-                    app:cardCornerRadius="16dp"
-                    app:cardElevation="1dp"
-                    app:strokeColor="#7C4DFF"
-                    app:strokeWidth="1dp"
                     app:icon="@drawable/ic_baseline_apps"
-                    app:iconTint="#7C4DFF"
                     app:subtext="@{mode}"
                     app:text="@string/proxy" />
 
-                <!-- KARTU PROVIDERS (Jika Ada) -->
+                <!-- Menu Profile -->
+                <com.github.kr328.clash.design.view.LargeActionCard
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginVertical="@dimen/main_card_margin_vertical"
+                    android:onClick="@{() -> self.request(Request.OpenProfiles)}"
+                    app:icon="@drawable/ic_baseline_view_list"
+                    app:subtext="@{profileName != null ? @string/format_profile_activated(profileName) : @string/not_selected}"
+                    app:text="@string/profile" />
+
+                <!-- Menu Providers -->
                 <com.github.kr328.clash.design.view.LargeActionLabel
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginVertical="6dp"
+                    android:layout_marginVertical="@dimen/main_label_margin_vertical"
                     android:onClick="@{() -> self.request(Request.OpenProviders)}"
                     android:visibility="@{clashRunning &amp;&amp; hasProviders ? View.VISIBLE : View.GONE}"
                     app:icon="@drawable/ic_baseline_swap_vertical_circle"
-                    app:iconTint="#7C4DFF"
                     app:text="@string/providers" />
 
             </LinearLayout>
         </ScrollView>
 
-        <!-- BOTTOM BAR: Menu Navigasi Bawah Berjajar Horisontal -->
+        <!-- Menu Bawah (Bottom Bar Horizontal) -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="64dp"
             android:layout_gravity="bottom"
             android:background="#FFFFFF"
-            android:elevation="12dp"
+            android:elevation="8dp"
             android:gravity="center"
             android:orientation="horizontal"
             android:paddingBottom="@{self.surface.insets.bottom}">
 
-            <!-- Tab 1: Logs -->
             <LinearLayout
                 android:layout_width="0dp"
                 android:layout_height="match_parent"
@@ -176,11 +162,10 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="@string/logs"
-                    android:textColor="#4A148C"
+                    android:textColor="#311B92"
                     android:textSize="11sp" />
             </LinearLayout>
 
-            <!-- Tab 2: Settings -->
             <LinearLayout
                 android:layout_width="0dp"
                 android:layout_height="match_parent"
@@ -202,11 +187,10 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="@string/settings"
-                    android:textColor="#4A148C"
+                    android:textColor="#311B92"
                     android:textSize="11sp" />
             </LinearLayout>
 
-            <!-- Tab 3: Help -->
             <LinearLayout
                 android:layout_width="0dp"
                 android:layout_height="match_parent"
@@ -228,11 +212,10 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="@string/help"
-                    android:textColor="#4A148C"
+                    android:textColor="#311B92"
                     android:textSize="11sp" />
             </LinearLayout>
 
-            <!-- Tab 4: About -->
             <LinearLayout
                 android:layout_width="0dp"
                 android:layout_height="match_parent"
@@ -254,11 +237,10 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="@string/about"
-                    android:textColor="#4A148C"
+                    android:textColor="#311B92"
                     android:textSize="11sp" />
             </LinearLayout>
 
         </LinearLayout>
-
     </androidx.coordinatorlayout.widget.CoordinatorLayout>
 </layout>
