@@ -86,7 +86,7 @@ class ConfigurationModule(service: Service) : Module<ConfigurationModule.LoadExc
             // 1. TCP Concurrent
             if (store.tcpConcurrent) {
                 content = if (content.contains("tcp-concurrent:")) {
-                    content.replace(Regex("tcp-concurrent:\s*(true|false)"), "tcp-concurrent: true")
+                    content.replace(Regex("tcp-concurrent:\\s*(true|false)"), "tcp-concurrent: true")
                 } else {
                     "tcp-concurrent: true\n$content"
                 }
@@ -95,7 +95,7 @@ class ConfigurationModule(service: Service) : Module<ConfigurationModule.LoadExc
             // 2. Unified Delay
             if (store.unifiedDelay) {
                 content = if (content.contains("unified-delay:")) {
-                    content.replace(Regex("unified-delay:\s*(true|false)"), "unified-delay: true")
+                    content.replace(Regex("unified-delay:\\s*(true|false)"), "unified-delay: true")
                 } else {
                     "unified-delay: true\n$content"
                 }
@@ -104,6 +104,7 @@ class ConfigurationModule(service: Service) : Module<ConfigurationModule.LoadExc
             // 3. Domain Sniffer
             if (store.enableSniffer) {
                 val snifferBlock = "sniffer:\n  enable: true\n  sniff:\n    TLS:\n      ports: [443, 8443]\n    HTTP:\n      ports: [80, 8080-8880]\n"
+                if (!content.contains("sniffer:")) {
                     content = "$snifferBlock$content"
                 }
             }
@@ -117,37 +118,40 @@ class ConfigurationModule(service: Service) : Module<ConfigurationModule.LoadExc
                     "1.1.1.1"
                 }
 
-                var filterYaml = ""
+                val filterBuilder = StringBuilder()
                 if (store.enableFakeIpFilter) {
                     val rawList = store.customFakeIpFilter.split(",")
-                    val parsed = StringBuilder()
                     for (item in rawList) {
                         val trimmed = item.trim()
                         if (trimmed.isNotEmpty()) {
-                            parsed.append("    - '").append(trimmed).append("'\n")
+                            filterBuilder.append("    - '").append(trimmed).append("'\n")
                         }
                     }
-                    filterYaml = "  fake-ip-filter:\n    - '+.stun.*'\n    - '+.msftconnecttest.com'\n    - '+.msftncsi.com'\n    - 'time.*.com'\n    - 'ntp.*.com'\n$parsed"
+                }
+                val filterYaml = if (store.enableFakeIpFilter) {
+                    "  fake-ip-filter:\n    - '+.stun.*'\n    - '+.msftconnecttest.com'\n    - '+.msftncsi.com'\n    - 'time.*.com'\n    - 'ntp.*.com'\n" + filterBuilder.toString()
+                } else {
+                    ""
                 }
 
-                val dnsBlock = """
-dns:
-  enable: true
-  ipv6: false
-  enhanced-mode: fake-ip
-  fake-ip-range: 198.18.0.1/16
-  default-nameserver:
-    - 8.8.8.8
-    - 1.1.1.1
-  nameserver:
-    - $targetDoh
-    - 8.8.8.8
-    - 1.1.1.1
-  fallback:
-    - https://1.0.0.1/dns-query
-$filterYaml""".trimIndent()
+                val dnsBlock = StringBuilder()
+                    .appendLine("dns:")
+                    .appendLine("  enable: true")
+                    .appendLine("  ipv6: false")
+                    .appendLine("  enhanced-mode: fake-ip")
+                    .appendLine("  fake-ip-range: 198.18.0.1/16")
+                    .appendLine("  default-nameserver:")
+                    .appendLine("    - 8.8.8.8")
+                    .appendLine("    - 1.1.1.1")
+                    .appendLine("  nameserver:")
+                    .appendLine("    - $targetDoh")
+                    .appendLine("    - 8.8.8.8")
+                    .appendLine("    - 1.1.1.1")
+                    .appendLine("  fallback:")
+                    .appendLine("    - https://1.0.0.1/dns-query")
+                    .append(filterYaml)
+                    .toString()
 
-                // Hapus blok dns lama baris demi baris secara aman
                 if (content.contains("dns:")) {
                     val lines = content.lines()
                     val resultLines = mutableListOf<String>()
@@ -158,6 +162,7 @@ $filterYaml""".trimIndent()
                             continue
                         }
                         if (skipDns) {
+                            if (line.isNotEmpty() && !line.startsWith(" ") && !line.startsWith("\t")) {
                                 skipDns = false
                                 resultLines.add(line)
                             }
@@ -172,8 +177,8 @@ $filterYaml""".trimIndent()
             }
 
             configFile.writeText(content)
-        } catch (_: Exception) {
-            // Abaikan kegagalan logging agar tidak memicu error compiler
+        } catch (e: Exception) {
+            Log.w("Failed to apply custom tuning", e)
         }
     }
 }
