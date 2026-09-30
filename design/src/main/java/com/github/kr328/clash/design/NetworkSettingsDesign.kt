@@ -80,6 +80,7 @@ class NetworkSettingsDesign(
 
             editableText(
                 value = srvStore::dohUrl,
+                adapter = NullableTextAdapter.String,
                 
                 title = R.string.doh_url,
             ) {
@@ -127,6 +128,7 @@ class NetworkSettingsDesign(
 
             editableText(
                 value = srvStore::customFakeIpFilter,
+                adapter = NullableTextAdapter.String,
                 
                 title = R.string.fake_ip_filter_list,
             ) {
