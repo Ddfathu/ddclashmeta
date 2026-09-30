@@ -17,16 +17,6 @@ android {
         versionName = "1.0.0"
     }
 
-    // Kunci ABI hanya memproses arm64-v8a lewat splits (tanpa ndk abiFilters agar tidak bentrok)
-    splits {
-        abi {
-            isEnable = true
-            reset()
-            include("arm64-v8a")
-            isUniversalApk = false
-        }
-    }
-
     buildTypes {
         release {
             isMinifyEnabled = false
