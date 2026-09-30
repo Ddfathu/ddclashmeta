@@ -146,11 +146,13 @@ class NewProfileActivity : BaseActivity<NewProfileDesign>() {
                     }
                 }
 
+                // Langsung simpan profile ke database dan close activity
+                commit(profileId)
+
                 withContext(Dispatchers.Main) {
-                    Toast.makeText(this@NewProfileActivity, "Berhasil import profil dari clipboard!", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this@NewProfileActivity, "Profil berhasil disimpan!", Toast.LENGTH_SHORT).show()
+                    finish()
                 }
-                
-                launchProperties(profileId)
             }
         } catch (e: Exception) {
             withContext(Dispatchers.Main) {
