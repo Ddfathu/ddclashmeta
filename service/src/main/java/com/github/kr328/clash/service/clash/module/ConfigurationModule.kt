@@ -1,11 +1,9 @@
 package com.github.kr328.clash.service.clash.module
 
+import android.app.Service
 import com.github.kr328.clash.common.log.Log
 import com.github.kr328.clash.core.Clash
-import com.github.kr328.clash.service.BaseService
 import com.github.kr328.clash.service.StatusProvider
-import com.github.kr328.clash.service.clash.common.enqueueEvent
-import com.github.kr328.clash.service.clash.common.receiveBroadcast
 import com.github.kr328.clash.service.data.ImportedDao
 import com.github.kr328.clash.service.data.SelectionDao
 import com.github.kr328.clash.service.store.ServiceStore
@@ -16,7 +14,7 @@ import kotlinx.coroutines.selects.select
 import java.io.File
 import java.util.UUID
 
-class ConfigurationModule(service: BaseService) : Module<ConfigurationModule.LoadException>(service) {
+class ConfigurationModule(service: Service) : Module<ConfigurationModule.LoadException>(service) {
     class LoadException(val message: String)
 
     private val store = ServiceStore(service)
@@ -147,7 +145,7 @@ class ConfigurationModule(service: BaseService) : Module<ConfigurationModule.Loa
 
             configFile.writeText(content)
         } catch (_: Exception) {
-            // Hindari Log.e yang overload argumennya tidak cocok di modul common
+            // Abaikan kegagalan logging agar tidak memicu error compiler
         }
     }
 }
