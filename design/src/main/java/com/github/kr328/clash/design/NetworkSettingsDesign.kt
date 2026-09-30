@@ -65,7 +65,7 @@ class NetworkSettingsDesign(
             // KATEGORI 1: OPTIMASI PERFORMA JARINGAN
             category(R.string.network_tuning_category)
 
-            switch(
+            val dohSwitch = switch(
                 value = srvStore::enableDoh,
                 title = R.string.enable_doh,
                 summary = R.string.enable_doh_summary,
@@ -80,7 +80,7 @@ class NetworkSettingsDesign(
 
             editableText(
                 value = srvStore::dohUrl,
-                adapter = StringAdapter,
+                
                 title = R.string.doh_url,
             ) {
                 placeholder = context.getString(R.string.doh_url_summary)
@@ -112,7 +112,7 @@ class NetworkSettingsDesign(
                 vpnDependencies.add(this)
             }
 
-            switch(
+            val fakeIpSwitch = switch(
                 value = srvStore::enableFakeIpFilter,
                 title = R.string.enable_fake_ip_filter,
                 summary = R.string.enable_fake_ip_filter_summary,
@@ -127,7 +127,7 @@ class NetworkSettingsDesign(
 
             editableText(
                 value = srvStore::customFakeIpFilter,
-                adapter = StringAdapter,
+                
                 title = R.string.fake_ip_filter_list,
             ) {
                 placeholder = context.getString(R.string.fake_ip_filter_list_summary)
