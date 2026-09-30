@@ -17,6 +17,22 @@ android {
         applicationId = "com.ddclash.meta"
         versionCode = 20260930
         versionName = "1.0.0"
+
+        // Batasi NDK hanya memproses arm64-v8a agar build cepat dan ukuran kecil
+        ndk {
+            abiFilters.clear()
+            abiFilters.add("arm64-v8a")
+        }
+    }
+
+    // Nonaktifkan APK universal & kunci ABI hanya untuk arm64-v8a
+    splits {
+        abi {
+            isEnable = true
+            reset()
+            include("arm64-v8a")
+            isUniversalApk = false
+        }
     }
 
     buildTypes {
