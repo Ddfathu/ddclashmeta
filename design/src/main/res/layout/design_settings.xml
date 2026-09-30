@@ -12,6 +12,7 @@
     <androidx.coordinatorlayout.widget.CoordinatorLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
+        android:background="#F8F7FF"
         android:paddingStart="@{self.surface.insets.start}"
         android:paddingEnd="@{self.surface.insets.end}">
 
@@ -25,44 +26,100 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:paddingTop="@{(float) self.surface.insets.top + @dimen/toolbar_height}"
-                android:paddingBottom="@{self.surface.insets.bottom}">
+                android:paddingHorizontal="16dp"
+                android:paddingTop="@{(float) self.surface.insets.top + @dimen/toolbar_height + 12}"
+                android:paddingBottom="@{self.surface.insets.bottom + 24}">
 
-                <com.github.kr328.clash.design.view.ActionLabel
+                <!-- KARTU 1: APP SETTINGS -->
+                <com.google.android.material.card.MaterialCardView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:onClick="@{() -> self.request(Request.StartApp)}"
-                    app:icon="@drawable/ic_baseline_settings"
-                    app:text="@string/app" />
+                    android:layout_marginVertical="6dp"
+                    app:cardBackgroundColor="#FFFFFF"
+                    app:cardCornerRadius="16dp"
+                    app:cardElevation="2dp"
+                    app:strokeColor="#D1C4E9"
+                    app:strokeWidth="1dp">
 
-                <com.github.kr328.clash.design.view.ActionLabel
+                    <com.github.kr328.clash.design.view.ActionLabel
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:onClick="@{() -> self.request(Request.StartApp)}"
+                        app:icon="@drawable/ic_baseline_settings"
+                        app:iconTint="#7C4DFF"
+                        app:text="@string/app" />
+                </com.google.android.material.card.MaterialCardView>
+
+                <!-- KARTU 2: NETWORK -->
+                <com.google.android.material.card.MaterialCardView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:onClick="@{() -> self.request(Request.StartNetwork)}"
-                    app:icon="@drawable/ic_baseline_dns"
-                    app:text="@string/network" />
+                    android:layout_marginVertical="6dp"
+                    app:cardBackgroundColor="#FFFFFF"
+                    app:cardCornerRadius="16dp"
+                    app:cardElevation="2dp"
+                    app:strokeColor="#D1C4E9"
+                    app:strokeWidth="1dp">
 
-                <com.github.kr328.clash.design.view.ActionLabel
+                    <com.github.kr328.clash.design.view.ActionLabel
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:onClick="@{() -> self.request(Request.StartNetwork)}"
+                        app:icon="@drawable/ic_baseline_dns"
+                        app:iconTint="#7C4DFF"
+                        app:text="@string/network" />
+                </com.google.android.material.card.MaterialCardView>
+
+                <!-- KARTU 3: OVERRIDE -->
+                <com.google.android.material.card.MaterialCardView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:onClick="@{() -> self.request(Request.StartOverride)}"
-                    app:icon="@drawable/ic_baseline_extension"
-                    app:text="@string/override" />
+                    android:layout_marginVertical="6dp"
+                    app:cardBackgroundColor="#FFFFFF"
+                    app:cardCornerRadius="16dp"
+                    app:cardElevation="2dp"
+                    app:strokeColor="#D1C4E9"
+                    app:strokeWidth="1dp">
 
-                <com.github.kr328.clash.design.view.ActionLabel
+                    <com.github.kr328.clash.design.view.ActionLabel
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:onClick="@{() -> self.request(Request.StartOverride)}"
+                        app:icon="@drawable/ic_baseline_extension"
+                        app:iconTint="#7C4DFF"
+                        app:text="@string/override" />
+                </com.google.android.material.card.MaterialCardView>
+
+                <!-- KARTU 4: META FEATURES -->
+                <com.google.android.material.card.MaterialCardView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:onClick="@{() -> self.request(Request.StartMetaFeature)}"
-                    app:icon="@drawable/ic_baseline_meta"
-                    app:text="@string/meta_features" />
+                    android:layout_marginVertical="6dp"
+                    app:cardBackgroundColor="#FFFFFF"
+                    app:cardCornerRadius="16dp"
+                    app:cardElevation="2dp"
+                    app:strokeColor="#D1C4E9"
+                    app:strokeWidth="1dp">
+
+                    <com.github.kr328.clash.design.view.ActionLabel
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:onClick="@{() -> self.request(Request.StartMetaFeature)}"
+                        app:icon="@drawable/ic_baseline_meta"
+                        app:iconTint="#7C4DFF"
+                        app:text="@string/meta_features" />
+                </com.google.android.material.card.MaterialCardView>
 
             </LinearLayout>
         </com.github.kr328.clash.design.view.ObservableScrollView>
 
+        <!-- HEADER TOOLBAR -->
         <com.github.kr328.clash.design.view.ActivityBarLayout
             android:id="@+id/activity_bar_layout"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:background="#FFFFFF"
+            android:elevation="4dp"
             android:paddingTop="@{self.surface.insets.top}"
             android:paddingEnd="@dimen/item_tailing_margin">
 

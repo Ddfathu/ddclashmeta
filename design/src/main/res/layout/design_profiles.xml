@@ -12,24 +12,29 @@
     <androidx.coordinatorlayout.widget.CoordinatorLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
+        android:background="#F8F7FF"
         android:paddingStart="@{self.surface.insets.start}"
         android:paddingEnd="@{self.surface.insets.end}">
 
+        <!-- Daftar Profil Config -->
         <include
             android:id="@+id/main_list"
             layout="@layout/common_recycler_list"
             app:insets="@{self.surface.insets}" />
 
+        <!-- Header Toolbar Atas -->
         <com.github.kr328.clash.design.view.ActivityBarLayout
             android:id="@+id/activity_bar_layout"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:background="#FFFFFF"
+            android:elevation="4dp"
             android:paddingTop="@{self.surface.insets.top}">
 
             <RelativeLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:paddingEnd="@dimen/item_tailing_margin">
+                android:paddingEnd="16dp">
 
                 <include
                     layout="@layout/common_activity_bar"
@@ -39,6 +44,7 @@
                     android:layout_centerVertical="true"
                     android:layout_toStartOf="@id/update_layout" />
 
+                <!-- Tombol Update/Sinkronisasi Semua Profil -->
                 <FrameLayout
                     android:id="@+id/update_layout"
                     android:layout_width="wrap_content"
@@ -48,35 +54,38 @@
 
                     <ImageView
                         android:id="@+id/update_view"
-                        android:layout_width="@dimen/item_tailing_component_size"
-                        android:layout_height="@dimen/item_tailing_component_size"
+                        android:layout_width="40dp"
+                        android:layout_height="40dp"
                         android:layout_gravity="end|center_vertical"
-                        android:layout_marginStart="@dimen/item_tailing_margin"
+                        android:layout_marginStart="8dp"
                         android:background="?attr/selectableItemBackgroundBorderless"
                         android:clickable="true"
                         android:contentDescription="@string/_new"
                         android:focusable="true"
                         android:onClick="@{() -> self.requestUpdateAll()}"
-                        android:padding="@dimen/toolbar_image_action_padding"
+                        android:padding="8dp"
                         android:src="@drawable/ic_baseline_sync"
-                        android:visibility="gone" />
+                        android:visibility="gone"
+                        app:tint="#7C4DFF" />
                 </FrameLayout>
 
+                <!-- Tombol Tambah Profil Baru (+) -->
                 <ImageView
                     android:id="@+id/add_view"
-                    android:layout_width="@dimen/item_tailing_component_size"
-                    android:layout_height="@dimen/item_tailing_component_size"
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
                     android:layout_alignParentEnd="true"
                     android:layout_centerVertical="true"
                     android:layout_gravity="end|center_vertical"
-                    android:layout_marginStart="@dimen/item_tailing_margin"
+                    android:layout_marginStart="8dp"
                     android:background="?attr/selectableItemBackgroundBorderless"
                     android:clickable="true"
                     android:contentDescription="@string/_new"
                     android:focusable="true"
                     android:onClick="@{() -> self.requestCreate()}"
-                    android:padding="@dimen/toolbar_image_action_padding"
-                    android:src="@drawable/ic_baseline_add" />
+                    android:padding="8dp"
+                    android:src="@drawable/ic_baseline_add"
+                    app:tint="#7C4DFF" />
 
             </RelativeLayout>
         </com.github.kr328.clash.design.view.ActivityBarLayout>

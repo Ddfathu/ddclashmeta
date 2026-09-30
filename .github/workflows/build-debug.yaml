@@ -44,8 +44,19 @@ jobs:
       - name: Grant Execute Permission
         run: chmod +x ./gradlew
 
-      - name: Build APK (Alpha Release)
-        run: ./gradlew --no-daemon app:assembleAlphaRelease
+      # Build khusus arsitektur arm64-v8a agar ukuran file ramping & kompilasi cepat
+      - name: Build APK (Alpha Release arm64-v8a)
+        run: ./gradlew --no-daemon app:assembleAlphaArm64-v8aRelease
+
+      # Rapikan nama file output agar langsung bernama DDclash-Meta
+      - name: Rename APK
+        run: |
+          cd app/build/outputs/apk/alpha/release/
+          for f in *arm64-v8a*.apk; do
+            if [ -f "$f" ]; then
+              cp "$f" "DDclash-Meta-arm64-v8a.apk"
+            fi
+          done
 
       - name: Sign APK with Debug Keystore
         run: |
@@ -61,19 +72,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: DDclash-Meta-arm64-v8a
-          path: app/build/outputs/apk/alpha/release/*-arm64-v8a-*.apk
-          if-no-files-found: warn
-
-      - name: Upload DDclash Meta (universal)
-        uses: actions/upload-artifact@v4
-        with:
-          name: DDclash-Meta-universal
-          path: app/build/outputs/apk/alpha/release/*-universal-*.apk
-          if-no-files-found: warn
-
-      - name: Upload All Output APKs
-        uses: actions/upload-artifact@v4
-        with:
-          name: DDclash-Meta-All-APKs
-          path: app/build/outputs/apk/alpha/release/*.apk
+          path: app/build/outputs/apk/alpha/release/DDclash-Meta-arm64-v8a.apk
           if-no-files-found: warn

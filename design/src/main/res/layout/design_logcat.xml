@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<layout xmlns:android="http://schemas.android.com/apk/res/android">
+<layout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
     <data>
         <variable
             name="self"
@@ -14,27 +15,33 @@
     <androidx.coordinatorlayout.widget.CoordinatorLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
+        android:background="#F8F7FF"
         android:paddingStart="@{self.surface.insets.start}"
         android:paddingEnd="@{self.surface.insets.end}">
 
+        <!-- Area List Log (RecyclerView) -->
         <com.github.kr328.clash.design.view.AppRecyclerView
             android:id="@+id/recycler_list"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:clipToPadding="false"
-            android:paddingTop="@{(float) self.surface.insets.top + @dimen/toolbar_height}"
-            android:paddingBottom="@{self.surface.insets.bottom}" />
+            android:paddingHorizontal="8dp"
+            android:paddingTop="@{(float) self.surface.insets.top + @dimen/toolbar_height + 8}"
+            android:paddingBottom="@{self.surface.insets.bottom + 8}" />
 
+        <!-- Toolbar Atas Floating -->
         <com.github.kr328.clash.design.view.ActivityBarLayout
             android:id="@+id/activity_bar_layout"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:background="#FFFFFF"
+            android:elevation="4dp"
             android:paddingTop="@{self.surface.insets.top}">
 
             <RelativeLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:paddingEnd="@dimen/item_tailing_margin">
+                android:paddingEnd="16dp">
 
                 <include
                     layout="@layout/common_activity_bar"
@@ -51,49 +58,58 @@
                     android:layout_alignParentEnd="true"
                     android:layout_centerVertical="true">
 
+                    <!-- Menu Aksi Ketika Tidak Sedang Streaming (Delete & Export) -->
                     <LinearLayout
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal"
                         android:visibility="@{streaming ? View.GONE : View.VISIBLE}">
 
+                        <!-- Tombol Hapus Log -->
                         <ImageView
-                            android:layout_width="@dimen/item_tailing_component_size"
-                            android:layout_height="@dimen/item_tailing_component_size"
-                            android:layout_marginStart="@dimen/item_tailing_margin"
-                            android:background="?selectableItemBackgroundBorderless"
+                            android:layout_width="40dp"
+                            android:layout_height="40dp"
+                            android:layout_marginStart="8dp"
+                            android:background="?attr/selectableItemBackgroundBorderless"
                             android:clickable="true"
                             android:contentDescription="@string/delete"
                             android:focusable="true"
                             android:onClick="@{() -> self.requests.offer(Request.Delete)}"
-                            android:padding="@dimen/toolbar_image_action_padding"
-                            android:src="@drawable/ic_baseline_delete" />
+                            android:padding="8dp"
+                            android:src="@drawable/ic_baseline_delete"
+                            app:tint="#7C4DFF" />
 
+                        <!-- Tombol Export Log -->
                         <ImageView
-                            android:layout_width="@dimen/item_tailing_component_size"
-                            android:layout_height="@dimen/item_tailing_component_size"
-                            android:layout_marginStart="@dimen/item_tailing_margin"
-                            android:background="?selectableItemBackgroundBorderless"
+                            android:layout_width="40dp"
+                            android:layout_height="40dp"
+                            android:layout_marginStart="8dp"
+                            android:background="?attr/selectableItemBackgroundBorderless"
                             android:clickable="true"
                             android:contentDescription="@string/export"
                             android:focusable="true"
                             android:onClick="@{() -> self.requests.offer(Request.Export)}"
-                            android:padding="@dimen/toolbar_image_action_padding"
-                            android:src="@drawable/ic_baseline_publish" />
+                            android:padding="8dp"
+                            android:src="@drawable/ic_baseline_publish"
+                            app:tint="#7C4DFF" />
                     </LinearLayout>
 
+                    <!-- Tombol Stop Streaming Log -->
                     <ImageView
-                        android:layout_width="@dimen/item_tailing_component_size"
-                        android:layout_height="@dimen/item_tailing_component_size"
+                        android:layout_width="40dp"
+                        android:layout_height="40dp"
                         android:layout_gravity="end"
-                        android:layout_marginStart="@dimen/item_tailing_margin"
-                        android:background="?selectableItemBackgroundBorderless"
+                        android:layout_marginStart="8dp"
+                        android:background="?attr/selectableItemBackgroundBorderless"
                         android:clickable="true"
                         android:contentDescription="@string/close"
                         android:focusable="true"
                         android:onClick="@{() -> self.requests.offer(Request.Close)}"
-                        android:padding="@dimen/toolbar_image_action_padding"
+                        android:padding="8dp"
                         android:src="@drawable/ic_baseline_stop"
-                        android:visibility="@{streaming ? View.VISIBLE : View.GONE}" />
+                        android:visibility="@{streaming ? View.VISIBLE : View.GONE}"
+                        app:tint="#D50000" />
                 </FrameLayout>
 
             </RelativeLayout>
