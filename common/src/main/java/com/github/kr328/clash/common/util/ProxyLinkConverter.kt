@@ -24,12 +24,15 @@ object ProxyLinkConverter {
         val sb = StringBuilder()
         sb.append(getBaseConfigHeader())
 
-        sb.append("\nproxies:\n")
+        // Beri spasi / paragraf 2 baris kosong agar tidak mepet ke pengaturan port atas
+        sb.append("\n\nproxies:\n")
         nodes.forEach { sb.append(it.toYamlBlock()).append("\n\n") }
 
         sb.append("proxy-groups:\n")
         sb.append("  - name: PROXIES\n")
         sb.append("    type: select\n")
+        sb.append("    url: \"https://www.gstatic.com/generate_204\"\n")
+        sb.append("    interval: 300\n")
         sb.append("    proxies:\n")
         nodes.forEach { sb.append("      - \"").append(it.name).append("\"\n") }
         sb.append("      - DIRECT\n\n")
@@ -62,14 +65,14 @@ object ProxyLinkConverter {
 
         var result = existingYaml
 
-        // 1. Sisipkan ke blok proxies
+        // Sisipkan ke blok proxies dengan jeda baris
         result = if (result.contains("proxies:\n")) {
             result.replaceFirst("proxies:\n", "proxies:\n$newProxiesYaml")
         } else {
             result + "\n\nproxies:\n$newProxiesYaml"
         }
 
-        // 2. Sisipkan ke grup PROXIES
+        // Sisipkan ke grup PROXIES
         result = when {
             result.contains("      - DIRECT") -> {
                 result.replaceFirst("      - DIRECT", "$newGroupEntries      - DIRECT")
@@ -101,6 +104,12 @@ dns:
   ipv6: false
   enhanced-mode: fake-ip
   fake-ip-range: 198.18.0.1/16
+  fake-ip-filter:
+    - "+.stun.*.*"
+    - "+.turn.*.*"
+    - "*.twilio.com"
+    - "stun.*"
+    - "*twilio*"
   nameserver:
     - 1.1.1.1
     - 8.8.8.8
@@ -109,6 +118,10 @@ dns:
     - 8.8.4.4
 
 rules:
+  # JANGAN REJECT UDP 443! WebRTC TURN / STUN menggunakan UDP 443, 3478, dan 5349
+  - DST-PORT,443,PROXIES
+  - DST-PORT,3478,PROXIES
+  - DST-PORT,5349,PROXIES
   - MATCH,PROXIES
 """.trimIndent()
     }
@@ -171,7 +184,7 @@ rules:
         val net = uri.getQueryParameter("type") ?: "tcp"
         val security = uri.getQueryParameter("security") ?: "none"
         val sni = uri.getQueryParameter("sni") ?: uri.getQueryParameter("host") ?: server
-        val path = uri.getQueryParameter("path") ?: "/"
+        val path = uri.getQueryParameter("path")?.let { URLDecoder.decode(it, "UTF-8") } ?: "/"
 
         return ProxyNode(
             name = name,
@@ -194,7 +207,7 @@ rules:
         val password = uri.userInfo ?: ""
         val sni = uri.getQueryParameter("sni") ?: server
         val net = uri.getQueryParameter("type") ?: "tcp"
-        val path = uri.getQueryParameter("path") ?: "/"
+        val path = uri.getQueryParameter("path")?.let { URLDecoder.decode(it, "UTF-8") } ?: "/"
 
         return ProxyNode(
             name = name,
@@ -236,13 +249,19 @@ rules:
             if (cipher != null) sb.append("    cipher: ").append(cipher).append("\n")
 
             sb.append("    udp: true\n")
+            sb.append("    packet-encoding: packetaddr\n")
+            sb.append("    packet-addr: true\n")
+            sb.append("    xudp: true\n")
 
             if (tls) {
                 sb.append("    tls: true\n")
+                sb.append("    skip-cert-verify: true\n")
                 if (!sni.isNullOrBlank()) {
                     sb.append("    servername: ").append(sni).append("\n")
                     sb.append("    sni: ").append(sni).append("\n")
                 }
+                sb.append("    alpn:\n")
+                sb.append("      - http/1.1\n")
             }
 
             if (network.equals("ws", ignoreCase = true)) {
