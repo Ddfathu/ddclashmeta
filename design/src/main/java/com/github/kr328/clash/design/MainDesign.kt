@@ -28,7 +28,7 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
         OpenAbout,
     }
 
-    val binding = DesignMainBinding
+    private val binding = DesignMainBinding
         .inflate(context.layoutInflater, context.root, false)
 
     override val root: View
