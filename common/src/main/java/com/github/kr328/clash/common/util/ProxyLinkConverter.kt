@@ -36,54 +36,80 @@ object ProxyLinkConverter {
         return result
     }
 
-    fun appendOrGenerate(existingContent: String?, rawLinks: String): String {
+    // Untuk Opsi 1: Single Profile Full Standalone
+    fun generateStandaloneYaml(rawLinks: String): Pair<String, String> {
+        val nodes = parseNodes(rawLinks)
+        if (nodes.isEmpty()) throw IllegalArgumentException("Tidak ada proxy yang valid")
+        val mainName = nodes.first().second
+        return Pair(generateFullYaml(nodes), mainName)
+    }
+
+    // Untuk Opsi 2: Konfigurasi Induk (Base) dengan Proxy Provider
+    fun generateProviderBaseYaml(): String {
+        return """
+port: 7890
+socks-port: 7891
+allow-lan: false
+mode: rule
+log-level: info
+ipv6: false
+
+proxy-providers:
+  clipboard_nodes:
+    type: file
+    path: ./providers/clipboard.yaml
+    health-check:
+      enable: true
+      interval: 300
+      url: https://www.google.com/generate_204
+
+proxy-groups:
+  - name: PROXIES
+    type: select
+    use:
+      - clipboard_nodes
+    proxies:
+      - DIRECT
+
+dns:
+  enable: true
+  ipv6: false
+  enhanced-mode: fake-ip
+  fake-ip-range: 198.18.0.1/16
+  nameserver:
+    - 8.8.8.8
+    - 1.1.1.1
+    - https://dns.google/dns-query
+  fallback:
+    - 8.8.4.4
+    - 1.0.0.1
+
+rules:
+  - MATCH,PROXIES
+""".trimIndent()
+    }
+
+    // Untuk Opsi 2: Append atau Generate file provider (hanya berisi proxies:)
+    fun appendProviderContent(existingYaml: String?, rawLinks: String): String {
         val newNodes = parseNodes(rawLinks)
-        if (newNodes.isEmpty()) {
-            throw IllegalArgumentException("Tidak ditemukan link proxy yang valid")
-        }
+        if (newNodes.isEmpty()) throw IllegalArgumentException("Tidak ada proxy yang valid")
 
-        val existing = existingContent?.trim().orEmpty()
+        val sb = StringBuilder()
+        val existing = existingYaml?.trim().orEmpty()
+
         if (existing.isEmpty() || !existing.contains("proxies:")) {
-            return generateFullYaml(newNodes)
+            sb.appendLine("proxies:")
+            newNodes.forEach { sb.append(it.first) }
+            return sb.toString()
         }
 
-        val lines = existing.lines()
-        val result = mutableListOf<String>()
-
-        var inProxiesSection = false
-        var proxiesAppended = false
-
-        for (line in lines) {
-            val trimmed = line.trim()
-
-            if (trimmed == "proxies:" && !line.startsWith(" ") && !line.startsWith("\t")) {
-                inProxiesSection = true
-                result.add(line)
-                continue
-            }
-
-            if (inProxiesSection && line.isNotEmpty() && !line.startsWith(" ") && !line.startsWith("\t")) {
-                if (!proxiesAppended) {
-                    newNodes.forEach { result.add(it.first.trimEnd()) }
-                    proxiesAppended = true
-                }
-                inProxiesSection = false
-            }
-
-            if (trimmed == "- DIRECT" || trimmed == "- \"DIRECT\"") {
-                newNodes.forEach {
-                    result.add("      - \"${it.second}\"")
-                }
-            }
-
-            result.add(line)
+        // Jika sudah ada proxies:, cukup tambahkan baris node baru di paling bawah
+        sb.append(existing)
+        if (!existing.endsWith("\n")) sb.append("\n")
+        newNodes.forEach {
+            sb.append(it.first)
         }
-
-        if (inProxiesSection && !proxiesAppended) {
-            newNodes.forEach { result.add(it.first.trimEnd()) }
-        }
-
-        return result.joinToString("\n")
+        return sb.toString()
     }
 
     private fun generateFullYaml(nodes: List<Pair<String, String>>): String {
@@ -225,6 +251,7 @@ object ProxyLinkConverter {
         sb.appendLine("    port: $port")
         sb.appendLine("    password: \"$password\"")
         sb.appendLine("    udp: true")
+        sb.appendLine("    tls: true")
         sb.appendLine("    skip-cert-verify: true")
         sb.appendLine("    sni: $sni")
         sb.appendLine("    network: $type")

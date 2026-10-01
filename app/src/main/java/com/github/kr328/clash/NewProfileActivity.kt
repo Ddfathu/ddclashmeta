@@ -35,242 +35,233 @@ import kotlinx.coroutines.withContext
 import java.io.BufferedReader
 import java.io.InputStreamReader
 import java.io.OutputStreamWriter
-import java.util.*
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+import java.util.UUID
 
 class NewProfileActivity : BaseActivity<NewProfileDesign>() {
-    private val self: NewProfileActivity
-        get() = this
 
-    private val scanLauncher = registerForActivityResult(ScanQRCode(), ::scanResultHandler)
+    private val scanLauncher = registerForActivityResult(ScanQRCode()) { result ->
+        when (result) {
+            is QRSuccess -> handleScannedLink(result.content.rawValue)
+            is QRMissingPermission -> {
+                Toast.makeText(this, "Izin kamera dibutuhkan", Toast.LENGTH_SHORT).show()
+                val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                    data = Uri.fromParts("package", packageName, null)
+                }
+                startActivity(intent)
+            }
+            is QRError -> Toast.makeText(this, "Error kamera: ${result.exception.message}", Toast.LENGTH_SHORT).show()
+            QRUserCanceled -> {}
+        }
+    }
 
     override suspend fun main() {
         val design = NewProfileDesign(this)
+        setContentDesign(design)
 
         design.patchProviders(queryProfileProviders())
 
-        setContentDesign(design)
-
         while (isActive) {
             select<Unit> {
-                events.onReceive {
-
-                }
+                events.onReceive {}
                 design.requests.onReceive {
                     when (it) {
                         is NewProfileDesign.Request.Create -> {
-                            if (it.provider is ProfileProvider.Clipboard) {
-                                handleClipboardImport()
-                            } else {
-                                withProfile {
-                                    val name = getString(R.string.new_profile)
-
-                                    val uuid: UUID? = when (val p = it.provider) {
-                                        is ProfileProvider.File ->
-                                            create(Profile.Type.File, name)
-
-                                        is ProfileProvider.Url ->
-                                            create(Profile.Type.Url, name)
-
-                                        is ProfileProvider.QR -> {
-                                            null
-                                        }
-
-                                        is ProfileProvider.Clipboard -> {
-                                            null
-                                        }
-
-                                        is ProfileProvider.External -> {
-                                            val data = p.get()
-
-                                            if (data != null) {
-                                                val (uri, initialName) = data
-
-                                                create(
-                                                    Profile.Type.External,
-                                                    initialName ?: name,
-                                                    uri.toString()
-                                                )
-                                            } else {
-                                                null
+                            when (it.provider) {
+                                is ProfileProvider.ClipboardNew -> {
+                                    handleClipboardStandalone()
+                                }
+                                is ProfileProvider.ClipboardAppend -> {
+                                    handleClipboardProviderAppend()
+                                }
+                                else -> {
+                                    withProfile {
+                                        val name = getString(R.string.new_profile)
+                                        val uuid: UUID? = when (val p = it.provider) {
+                                            is ProfileProvider.File -> create(Profile.Type.File, name)
+                                            is ProfileProvider.Url -> create(Profile.Type.Url, name)
+                                            is ProfileProvider.External -> {
+                                                val data = p.get()
+                                                if (data != null) {
+                                                    val (uri, initialName) = data
+                                                    create(Profile.Type.External, initialName ?: name, uri.toString())
+                                                } else null
                                             }
+                                            else -> null
                                         }
+                                        if (uuid != null) launchProperties(uuid)
                                     }
-
-                                    if (uuid != null)
-                                        launchProperties(uuid)
                                 }
                             }
                         }
-
-                        is NewProfileDesign.Request.OpenDetail -> {
-                            launchAppDetailed(it.provider)
-                        }
-
-                        is NewProfileDesign.Request.LaunchScanner -> {
-                            scanLauncher.launch(null)
-                        }
+                        is NewProfileDesign.Request.OpenDetail -> launchAppDetailed(it.provider)
+                        is NewProfileDesign.Request.LaunchScanner -> scanLauncher.launch(null)
                     }
                 }
             }
         }
     }
 
-    private suspend fun handleClipboardImport() {
+    private fun getClipboardText(): String {
         val cm = getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
         val clipData = cm?.primaryClip
-        val text = if (clipData != null && clipData.itemCount > 0) {
+        return if (clipData != null && clipData.itemCount > 0) {
             clipData.getItemAt(0)?.text?.toString().orEmpty()
         } else {
             ""
         }
+    }
 
+    // Opsi 1: Profil Baru Mandiri per Impor (Pasti Berhasil)
+    private suspend fun handleClipboardStandalone() {
+        val text = getClipboardText()
         if (text.isBlank() || !ProxyLinkConverter.isProxyLink(text)) {
             withContext(Dispatchers.Main) {
-                Toast.makeText(this@NewProfileActivity, "Clipboard kosong atau tidak ada link vless/vmess/trojan", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this@NewProfileActivity, "Clipboard tidak berisi link vless/vmess/trojan", Toast.LENGTH_SHORT).show()
             }
             return
         }
 
         try {
+            val (yamlContent, nodeName) = ProxyLinkConverter.generateStandaloneYaml(text)
+            val time = SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(Date())
+            val profileName = "$nodeName ($time)"
+
             withProfile {
-                val targetName = "Quick / Clipboard"
-                val existingList = queryAll()
-                val existing = existingList.firstOrNull { it.name == targetName }
-                val profileId = existing?.uuid ?: create(Profile.Type.File, targetName)
+                val profileId = create(Profile.Type.File, profileName)
                 val client = FilesClient(this@NewProfileActivity)
 
                 withContext(Dispatchers.IO) {
                     val targetUri = client.buildDocumentUri("$profileId/config.yaml")
-
-                    var oldYaml = ""
-                    try {
-                        contentResolver.openInputStream(targetUri)?.use { stream ->
-                            oldYaml = BufferedReader(InputStreamReader(stream)).readText()
-                        }
-                    } catch (e: Exception) {
-                        oldYaml = ""
-                    }
-
-                    val finalYaml = ProxyLinkConverter.appendOrGenerate(oldYaml, text)
-
                     val outputStream = contentResolver.openOutputStream(targetUri, "rwt")
-                        ?: throw IllegalStateException("Gagal membuka stream berkas profil")
-
-                    OutputStreamWriter(outputStream).use { writer ->
-                        writer.write(finalYaml)
-                    }
+                        ?: throw IllegalStateException("Gagal membuka file config")
+                    OutputStreamWriter(outputStream).use { it.write(yamlContent) }
                 }
 
                 commit(profileId)
 
                 withContext(Dispatchers.Main) {
-                    Toast.makeText(this@NewProfileActivity, "Node proxy berhasil ditambahkan ke profil!", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this@NewProfileActivity, "Profil '$profileName' berhasil dibuat!", Toast.LENGTH_SHORT).show()
                     finish()
                 }
             }
         } catch (e: Exception) {
             withContext(Dispatchers.Main) {
-                Toast.makeText(this@NewProfileActivity, "Gagal memproses proxy: ${e.message}", Toast.LENGTH_LONG).show()
+                Toast.makeText(this@NewProfileActivity, "Gagal import standalone: ${e.message}", Toast.LENGTH_LONG).show()
             }
+        }
+    }
+
+    // Opsi 2: Append ke Proxy Provider (Kentang Mode)
+    private suspend fun handleClipboardProviderAppend() {
+        val text = getClipboardText()
+        if (text.isBlank() || !ProxyLinkConverter.isProxyLink(text)) {
+            withContext(Dispatchers.Main) {
+                Toast.makeText(this@NewProfileActivity, "Clipboard tidak berisi link vless/vmess/trojan", Toast.LENGTH_SHORT).show()
+            }
+            return
+        }
+
+        try {
+            val targetName = "Clipboard Provider"
+            val client = FilesClient(this@NewProfileActivity)
+
+            withProfile {
+                val existing = queryAll().firstOrNull { it.name == targetName }
+                if (existing == null) {
+                    // Buat profil induk pertama kali
+                    val profileId = create(Profile.Type.File, targetName)
+
+                    withContext(Dispatchers.IO) {
+                        // Tulis Configuration.yaml dasar dengan blok proxy-providers
+                        val baseConfigUri = client.buildDocumentUri("$profileId/config.yaml")
+                        contentResolver.openOutputStream(baseConfigUri, "rwt")?.use { os ->
+                            OutputStreamWriter(os).use { it.write(ProxyLinkConverter.generateProviderBaseYaml()) }
+                        }
+
+                        // Tulis file provider pertama kali
+                        val providerUri = client.buildDocumentUri("$profileId/providers/clipboard.yaml")
+                        val providerContent = ProxyLinkConverter.appendProviderContent(null, text)
+                        contentResolver.openOutputStream(providerUri, "rwt")?.use { os ->
+                            OutputStreamWriter(os).use { it.write(providerContent) }
+                        }
+                    }
+
+                    commit(profileId)
+                } else {
+                    // Profil induk sudah ada: cukup tambahkan node ke file providers/clipboard.yaml
+                    withContext(Dispatchers.IO) {
+                        val providerUri = client.buildDocumentUri("${existing.uuid}/providers/clipboard.yaml")
+                        var oldContent = ""
+                        try {
+                            contentResolver.openInputStream(providerUri)?.use { stream ->
+                                oldContent = BufferedReader(InputStreamReader(stream)).readText()
+                            }
+                        } catch (e: Exception) {
+                            oldContent = ""
+                        }
+
+                        val updatedContent = ProxyLinkConverter.appendProviderContent(oldContent, text)
+                        contentResolver.openOutputStream(providerUri, "rwt")?.use { os ->
+                            OutputStreamWriter(os).use { it.write(updatedContent) }
+                        }
+                    }
+                }
+
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(this@NewProfileActivity, "Node berhasil dimasukkan ke Provider!", Toast.LENGTH_SHORT).show()
+                    finish()
+                }
+            }
+        } catch (e: Exception) {
+            withContext(Dispatchers.Main) {
+                Toast.makeText(this@NewProfileActivity, "Gagal append provider: ${e.message}", Toast.LENGTH_LONG).show()
+            }
+        }
+    }
+
+    private fun handleScannedLink(content: String) {
+        val cm = getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
+        val clip = android.content.ClipData.newPlainText("Scanned Proxy", content)
+        cm?.setPrimaryClip(clip)
+        lifecycleScope.launch {
+            handleClipboardStandalone()
         }
     }
 
     private fun launchAppDetailed(provider: ProfileProvider.External) {
-        val data = Uri.fromParts(
-            "package",
-            provider.intent.component?.packageName ?: return,
-            null
-        )
-
-        startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).setData(data))
+        val data = Uri.fromParts("package", provider.intent.component?.packageName ?: return, null)
+        startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, data))
     }
 
-    private suspend fun launchProperties(uuid: UUID) {
-        val r = startActivityForResult(
-            ActivityResultContracts.StartActivityForResult(),
-            PropertiesActivity::class.intent.setUUID(uuid)
-        )
-
-        if (r.resultCode == Activity.RESULT_OK)
-            finish()
+    private fun launchProperties(uuid: UUID) {
+        startActivity(PropertiesActivity::class.intent.setUUID(uuid))
+        finish()
     }
 
     private suspend fun ProfileProvider.External.get(): Pair<Uri, String?>? {
+        val intent = Intent(intent).apply {
+            addCategory(Intent.CATEGORY_OPENABLE)
+            putExtra(Intents.EXTRA_CLASH_CONFIGURATION_NAME, getString(R.string.new_profile))
+        }
         val result = startActivityForResult(
             ActivityResultContracts.StartActivityForResult(),
             intent
         )
-
-        if (result.resultCode != RESULT_OK)
-            return null
-
-        val uri = result.data?.data
-        val name = result.data?.getStringExtra(Intents.EXTRA_NAME)
-
-        if (uri != null) {
-            return uri to name
-        }
-
-        return null
+        if (result.resultCode != Activity.RESULT_OK) return null
+        return (result.data?.data ?: return null) to
+                result.data?.getStringExtra(Intents.EXTRA_CLASH_CONFIGURATION_NAME)
     }
 
     private suspend fun queryProfileProviders(): List<ProfileProvider> {
-        return withContext(Dispatchers.IO) {
-            val providers = packageManager.queryIntentActivities(
-                Intent(Intents.ACTION_PROVIDE_URL),
-                0
-            ).map {
-                val activity = it.activityInfo
-
-                val name = activity.applicationInfo.loadLabel(packageManager)
-                val summary = activity.loadLabel(packageManager)
-                val icon = activity.loadIcon(packageManager)
-                val intent = Intent(Intents.ACTION_PROVIDE_URL)
-                    .setComponent(
-                        ComponentName(
-                            activity.packageName,
-                            activity.name
-                        )
-                    )
-
-                ProfileProvider.External(name.toString(), summary.toString(), icon, intent)
-            }
-
-            listOf(
-                ProfileProvider.File(self),
-                ProfileProvider.Url(self),
-                ProfileProvider.QR(self),
-                ProfileProvider.Clipboard(self)
-            ) + providers
-        }
-    }
-
-    private fun scanResultHandler(result: QRResult) {
-        lifecycleScope.launch {
-            when (result) {
-                is QRSuccess -> {
-                    val url = result.content.rawValue
-                        ?: result.content.rawBytes?.let { String(it) }.orEmpty()
-
-                    createProfileByQrCode(url)
-                }
-
-                QRUserCanceled -> {}
-                QRMissingPermission -> design?.showExceptionToast(getString(R.string.import_from_qr_no_permission))
-                is QRError -> design?.showExceptionToast(getString(R.string.import_from_qr_exception))
-            }
-        }
-    }
-
-    private suspend fun createProfileByQrCode(url: String) {
-        withProfile {
-            launchProperties(
-                create(
-                    type = Profile.Type.Url,
-                    name = getString(R.string.new_profile),
-                    url,
-                )
-            )
-        }
+        return listOf(
+            ProfileProvider.File(this),
+            ProfileProvider.Url(this),
+            ProfileProvider.QR(this),
+            ProfileProvider.ClipboardNew(this),
+            ProfileProvider.ClipboardAppend(this)
+        )
     }
 }

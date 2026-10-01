@@ -34,13 +34,22 @@ sealed class ProfileProvider {
             get() = context.getDrawableCompat(R.drawable.baseline_qr_code_scanner)
     }
 
-    class Clipboard(private val context: Context) : ProfileProvider() {
+    class ClipboardNew(private val context: Context) : ProfileProvider() {
         override val name: String
-            get() = "Import from Clipboard"
+            get() = "Clipboard (New Profile)"
         override val summary: String
-            get() = "Auto-convert Vless / Vmess / Trojan"
+            get() = "Create standalone profile per node"
         override val icon: Drawable?
             get() = context.getDrawableCompat(R.drawable.ic_baseline_assignment)
+    }
+
+    class ClipboardAppend(private val context: Context) : ProfileProvider() {
+        override val name: String
+            get() = "Clipboard (Kentang Mode)"
+        override val summary: String
+            get() = "Append nodes into Proxy Provider"
+        override val icon: Drawable?
+            get() = context.getDrawableCompat(R.drawable.ic_baseline_cloud_download)
     }
 
     class External(
