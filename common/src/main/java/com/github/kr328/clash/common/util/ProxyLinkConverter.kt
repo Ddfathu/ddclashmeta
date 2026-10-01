@@ -24,7 +24,7 @@ object ProxyLinkConverter {
         val sb = StringBuilder()
         sb.append(getBaseConfigHeader())
 
-        // Beri spasi / paragraf 2 baris kosong agar tidak mepet ke pengaturan port atas
+        // Jarak 2 baris kosong pemisah dari port atas
         sb.append("\n\nproxies:\n")
         nodes.forEach { sb.append(it.toYamlBlock()).append("\n\n") }
 
@@ -37,7 +37,7 @@ object ProxyLinkConverter {
         nodes.forEach { sb.append("      - \"").append(it.name).append("\"\n") }
         sb.append("      - DIRECT\n\n")
 
-        sb.append(getBaseRulesAndDns())
+        sb.append(getBaseRules())
         return Pair(sb.toString(), firstName)
     }
 
@@ -65,7 +65,7 @@ object ProxyLinkConverter {
 
         var result = existingYaml
 
-        // Sisipkan ke blok proxies dengan jeda baris
+        // Sisipkan ke blok proxies
         result = if (result.contains("proxies:\n")) {
             result.replaceFirst("proxies:\n", "proxies:\n$newProxiesYaml")
         } else {
@@ -97,28 +97,9 @@ ipv6: false
 """.trimIndent()
     }
 
-    private fun getBaseRulesAndDns(): String {
+    private fun getBaseRules(): String {
         return """
-dns:
-  enable: true
-  ipv6: false
-  enhanced-mode: fake-ip
-  fake-ip-range: 198.18.0.1/16
-  fake-ip-filter:
-    - "+.stun.*.*"
-    - "+.turn.*.*"
-    - "*.twilio.com"
-    - "stun.*"
-    - "*twilio*"
-  nameserver:
-    - 1.1.1.1
-    - 8.8.8.8
-    - 1.0.0.1
-  fallback:
-    - 8.8.4.4
-
 rules:
-  # JANGAN REJECT UDP 443! WebRTC TURN / STUN menggunakan UDP 443, 3478, dan 5349
   - DST-PORT,443,PROXIES
   - DST-PORT,3478,PROXIES
   - DST-PORT,5349,PROXIES
