@@ -130,7 +130,7 @@ class FilesActivity : BaseActivity<FilesDesign>() {
         val documentId = stack.lastOrNull() ?: root
         val files = if (stack.empty()) {
             val list = client.list(documentId)
-            val config = list.firstOrNull { it.id.endsWith("config.yaml") }
+            val config = list.firstOrNull { it.id.endsWith("config.yaml", ignoreCase = true) || it.id.endsWith("Configuration.yaml", ignoreCase = true) }
 
             if (config == null || config.size > 0) list else listOf(config)
         } else {

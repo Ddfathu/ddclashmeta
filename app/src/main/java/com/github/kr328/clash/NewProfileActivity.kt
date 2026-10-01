@@ -140,7 +140,7 @@ class NewProfileActivity : BaseActivity<NewProfileDesign>() {
                 withContext(Dispatchers.IO) {
                     val targetUri = client.buildDocumentUri("$profileId/config.yaml")
                     val outputStream = contentResolver.openOutputStream(targetUri, "rwt")
-                        ?: throw IllegalStateException("Gagal membuka file config")
+                        ?: throw IllegalStateException("Gagal membuka file config.yaml")
                     OutputStreamWriter(outputStream).use { it.write(yamlContent) }
                 }
 
@@ -158,7 +158,7 @@ class NewProfileActivity : BaseActivity<NewProfileDesign>() {
         }
     }
 
-    // Opsi 2: Kentang Mode (Satu profil, terus bertambah node-nya)
+    // Opsi 2: Kentang Mode (Satu profil, langsung suntik ke config.yaml)
     private suspend fun handleClipboardProviderAppend() {
         val text = getClipboardText()
         if (text.isBlank() || !ProxyLinkConverter.isProxyLink(text)) {
@@ -190,17 +190,16 @@ class NewProfileActivity : BaseActivity<NewProfileDesign>() {
                     val updatedYaml = ProxyLinkConverter.appendOrGenerateDirect(oldYaml, text)
 
                     val outputStream = contentResolver.openOutputStream(targetUri, "rwt")
-                        ?: throw IllegalStateException("Gagal membuka file config")
+                        ?: throw IllegalStateException("Gagal membuka file config.yaml")
                     OutputStreamWriter(outputStream).use { it.write(updatedYaml) }
                 }
 
-                // Hanya commit jika profil baru dibuat agar status tersimpan di PendingDao
                 if (existing == null) {
                     commit(profileId)
                 }
 
                 withContext(Dispatchers.Main) {
-                    Toast.makeText(this@NewProfileActivity, "Node berhasil ditambahkan ke Kentang Profile!", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this@NewProfileActivity, "Node berhasil disuntik ke Kentang Profile!", Toast.LENGTH_SHORT).show()
                     finish()
                 }
             }
