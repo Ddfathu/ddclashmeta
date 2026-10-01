@@ -96,16 +96,10 @@ dns:
   enable: true
   listen: 0.0.0.0:1053
   ipv6: false
-  enhanced-mode: fake-ip
-  fake-ip-range: 198.18.0.1/16
+  enhanced-mode: redir-host
   nameserver:
     - 1.1.1.1
     - 8.8.8.8
-  fake-ip-filter:
-    - "+.stun.*.*"
-    - "+.stun.*.*.*"
-    - "*.twilio.com"
-    - "+.twilio.com"
 """.trimIndent()
     }
 
