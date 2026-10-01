@@ -17,7 +17,6 @@ import com.github.kr328.clash.common.util.setUUID
 import com.github.kr328.clash.design.NewProfileDesign
 import com.github.kr328.clash.design.R
 import com.github.kr328.clash.design.model.ProfileProvider
-import com.github.kr328.clash.design.util.showExceptionToast
 import com.github.kr328.clash.remote.FilesClient
 import com.github.kr328.clash.service.model.Profile
 import com.github.kr328.clash.util.withProfile
@@ -44,7 +43,12 @@ class NewProfileActivity : BaseActivity<NewProfileDesign>() {
 
     private val scanLauncher = registerForActivityResult(ScanQRCode()) { result ->
         when (result) {
-            is QRSuccess -> handleScannedLink(result.content.rawValue)
+            is QRSuccess -> {
+                val rawValue = result.content.rawValue
+                if (!rawValue.isNullOrBlank()) {
+                    handleScannedLink(rawValue)
+                }
+            }
             is QRMissingPermission -> {
                 Toast.makeText(this, "Izin kamera dibutuhkan", Toast.LENGTH_SHORT).show()
                 val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
@@ -114,7 +118,6 @@ class NewProfileActivity : BaseActivity<NewProfileDesign>() {
         }
     }
 
-    // Opsi 1: Profil Baru Mandiri per Impor (Pasti Berhasil)
     private suspend fun handleClipboardStandalone() {
         val text = getClipboardText()
         if (text.isBlank() || !ProxyLinkConverter.isProxyLink(text)) {
@@ -154,7 +157,6 @@ class NewProfileActivity : BaseActivity<NewProfileDesign>() {
         }
     }
 
-    // Opsi 2: Append ke Proxy Provider (Kentang Mode)
     private suspend fun handleClipboardProviderAppend() {
         val text = getClipboardText()
         if (text.isBlank() || !ProxyLinkConverter.isProxyLink(text)) {
@@ -171,17 +173,14 @@ class NewProfileActivity : BaseActivity<NewProfileDesign>() {
             withProfile {
                 val existing = queryAll().firstOrNull { it.name == targetName }
                 if (existing == null) {
-                    // Buat profil induk pertama kali
                     val profileId = create(Profile.Type.File, targetName)
 
                     withContext(Dispatchers.IO) {
-                        // Tulis Configuration.yaml dasar dengan blok proxy-providers
                         val baseConfigUri = client.buildDocumentUri("$profileId/config.yaml")
                         contentResolver.openOutputStream(baseConfigUri, "rwt")?.use { os ->
                             OutputStreamWriter(os).use { it.write(ProxyLinkConverter.generateProviderBaseYaml()) }
                         }
 
-                        // Tulis file provider pertama kali
                         val providerUri = client.buildDocumentUri("$profileId/providers/clipboard.yaml")
                         val providerContent = ProxyLinkConverter.appendProviderContent(null, text)
                         contentResolver.openOutputStream(providerUri, "rwt")?.use { os ->
@@ -191,7 +190,6 @@ class NewProfileActivity : BaseActivity<NewProfileDesign>() {
 
                     commit(profileId)
                 } else {
-                    // Profil induk sudah ada: cukup tambahkan node ke file providers/clipboard.yaml
                     withContext(Dispatchers.IO) {
                         val providerUri = client.buildDocumentUri("${existing.uuid}/providers/clipboard.yaml")
                         var oldContent = ""
@@ -244,7 +242,7 @@ class NewProfileActivity : BaseActivity<NewProfileDesign>() {
     private suspend fun ProfileProvider.External.get(): Pair<Uri, String?>? {
         val intent = Intent(intent).apply {
             addCategory(Intent.CATEGORY_OPENABLE)
-            putExtra(Intents.EXTRA_CLASH_CONFIGURATION_NAME, getString(R.string.new_profile))
+            putExtra(Intents.EXTRA_NAME, getString(R.string.new_profile))
         }
         val result = startActivityForResult(
             ActivityResultContracts.StartActivityForResult(),
@@ -252,7 +250,7 @@ class NewProfileActivity : BaseActivity<NewProfileDesign>() {
         )
         if (result.resultCode != Activity.RESULT_OK) return null
         return (result.data?.data ?: return null) to
-                result.data?.getStringExtra(Intents.EXTRA_CLASH_CONFIGURATION_NAME)
+                result.data?.getStringExtra(Intents.EXTRA_NAME)
     }
 
     private suspend fun queryProfileProviders(): List<ProfileProvider> {
