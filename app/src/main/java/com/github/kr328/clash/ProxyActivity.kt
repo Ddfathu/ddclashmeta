@@ -95,7 +95,9 @@ class ProxyActivity : BaseActivity<ProxyDesign>() {
                                 withClash {
                                     healthCheck(names[it.index])
                                 }
-
+                                kotlinx.coroutines.delay(1000)
+                                design.requests.send(ProxyDesign.Request.Reload(it.index))
+                                kotlinx.coroutines.delay(1500)
                                 design.requests.send(ProxyDesign.Request.Reload(it.index))
                             }
                         }
