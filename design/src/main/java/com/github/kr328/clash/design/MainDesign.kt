@@ -10,6 +10,8 @@ import com.github.kr328.clash.core.util.trafficUpload
 import com.github.kr328.clash.design.databinding.DesignAboutBinding
 import com.github.kr328.clash.design.databinding.DesignMainBinding
 import com.github.kr328.clash.design.dialog.AppBottomSheetDialog
+import com.github.kr328.clash.design.util.layoutInflater
+import com.github.kr328.clash.design.util.root
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.withContext
@@ -29,11 +31,10 @@ class MainDesign(context: Context) : Design<DesignMainBinding>(context) {
     override val binding: DesignMainBinding =
         DesignMainBinding.inflate(context.layoutInflater, context.root, false)
 
-    val requests = Channel<Request>(Channel.CONFLATED)
+    override val root: View
+        get() = binding.root
 
-    fun request(req: Request) {
-        requests.trySend(req)
-    }
+    override val requests: Channel<Request> = Channel(Channel.CONFLATED)
 
     suspend fun setProfileName(name: String?) {
         withContext(Dispatchers.Main) {
