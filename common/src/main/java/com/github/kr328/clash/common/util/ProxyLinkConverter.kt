@@ -47,53 +47,43 @@ object ProxyLinkConverter {
             return generateFullYaml(newNodes)
         }
 
-        val lines = existing.lines().toMutableList()
-        val finalLines = mutableListOf<String>()
+        val lines = existing.lines()
+        val result = mutableListOf<String>()
 
-        var inProxies = false
+        var inProxiesSection = false
         var proxiesAppended = false
 
-        for (i in lines.indices) {
-            val line = lines[i]
+        for (line in lines) {
+            val trimmed = line.trim()
 
-            if (line.trim().startsWith("proxies:")) {
-                inProxies = true
-                finalLines.add(line)
+            if (trimmed == "proxies:" && !line.startsWith(" ") && !line.startsWith("\t")) {
+                inProxiesSection = true
+                result.add(line)
                 continue
             }
 
-            if (inProxies && (line.startsWith("proxy-groups:") || line.startsWith("dns:") || line.startsWith("rules:"))) {
+            if (inProxiesSection && line.isNotEmpty() && !line.startsWith(" ") && !line.startsWith("\t")) {
                 if (!proxiesAppended) {
-                    newNodes.forEach { finalLines.add(it.first.trimEnd()) }
+                    newNodes.forEach { result.add(it.first.trimEnd()) }
                     proxiesAppended = true
                 }
-                inProxies = false
+                inProxiesSection = false
             }
 
-            if (line.contains("name: PROXIES")) {
-                finalLines.add(line)
-                var j = i + 1
-                while (j < lines.size && !lines[j].trim().startsWith("proxies:")) {
-                    finalLines.add(lines[j])
-                    j++
+            if (trimmed == "- DIRECT" || trimmed == "- \"DIRECT\"") {
+                newNodes.forEach {
+                    result.add("      - \"${it.second}\"")
                 }
-                if (j < lines.size && lines[j].trim().startsWith("proxies:")) {
-                    finalLines.add(lines[j])
-                    newNodes.forEach {
-                        finalLines.add("      - \"${it.second}\"")
-                    }
-                }
-                continue
             }
 
-            finalLines.add(line)
+            result.add(line)
         }
 
-        if (!proxiesAppended) {
-            newNodes.forEach { finalLines.add(it.first.trimEnd()) }
+        if (inProxiesSection && !proxiesAppended) {
+            newNodes.forEach { result.add(it.first.trimEnd()) }
         }
 
-        return finalLines.joinToString("\n")
+        return result.joinToString("\n")
     }
 
     private fun generateFullYaml(nodes: List<Pair<String, String>>): String {
@@ -202,7 +192,7 @@ object ProxyLinkConverter {
         if (security == "tls") {
             sb.appendLine("    tls: true")
             sb.appendLine("    skip-cert-verify: true")
-            sb.appendLine("    servername: $sni")
+            if (sni.isNotEmpty()) sb.appendLine("    servername: $sni")
         }
         sb.appendLine("    network: $type")
         if (type == "ws") {
