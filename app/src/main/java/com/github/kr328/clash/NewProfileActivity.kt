@@ -140,7 +140,7 @@ class NewProfileActivity : BaseActivity<NewProfileDesign>() {
                 val client = FilesClient(this@NewProfileActivity)
 
                 withContext(Dispatchers.IO) {
-                    val targetUri = client.buildDocumentUri(profileId, "config.yaml")
+                    val targetUri = client.buildDocumentUri("$profileId/config.yaml")
 
                     var oldYaml = ""
                     try {
