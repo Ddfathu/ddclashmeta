@@ -134,6 +134,47 @@ object ProfileProcessor {
         }
     }
 
+    
+    private fun sanitizeConfigFile(file: java.io.File) {
+        if (!file.isFile) return
+        val ext = file.extension.lowercase(Locale.ROOT)
+        if (ext in listOf("yaml", "yml", "config", "conf", "json", "txt") || file.name == "config.yaml") {
+            runCatching {
+                var text = file.readText(Charsets.UTF_8)
+                val original = text
+
+                // 1. Ganti curly/smart quotes
+                text = text.replace("“", """)
+                           .replace("”", """)
+                           .replace("‘", "'")
+                           .replace("’", "'")
+
+                // 2. Ganti non-breaking space & zero-width space
+                text = text.replace(" ", " ")
+                           .replace(" ", " ")
+                           .replace(" ", " ")
+                           .replace("​", "")
+                           .replace("﻿", "")
+
+                // 3. Ganti Tab dengan 2 spasi (YAML illegal tab fix)
+                text = text.replace("	", "  ")
+
+                if (text != original) {
+                    file.writeText(text, Charsets.UTF_8)
+                }
+            }
+        }
+    }
+
+    private fun sanitizeDirectory(dir: java.io.File) {
+        if (!dir.exists() || !dir.isDirectory) return
+        dir.walkTopDown().forEach { file ->
+            if (file.isFile) {
+                sanitizeConfigFile(file)
+            }
+        }
+    }
+
     private suspend fun fetchProfile(
         context: Context,
         source: String,
@@ -143,6 +184,7 @@ object ProfileProcessor {
         var subscriptionInfo: FetchStatus? = null
         var cb = callback
 
+        sanitizeDirectory(context.processingDir)
         Clash.fetchAndValid(context.processingDir, source, force) {
             if (it.action == FetchStatus.Action.SubscriptionInfo) {
                 subscriptionInfo = it

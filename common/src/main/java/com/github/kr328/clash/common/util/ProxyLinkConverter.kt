@@ -24,7 +24,6 @@ object ProxyLinkConverter {
         val sb = StringBuilder()
         sb.append(getBaseConfigHeader())
 
-        // Beri jeda 2 baris kosong pemisah agar tidak menempel ke header port
         sb.append("\n\nproxies:\n")
         nodes.forEach { sb.append(it.toYamlBlock()).append("\n\n") }
 
@@ -65,14 +64,12 @@ object ProxyLinkConverter {
 
         var result = existingYaml
 
-        // Sisipkan ke blok proxies
         result = if (result.contains("proxies:\n")) {
             result.replaceFirst("proxies:\n", "proxies:\n$newProxiesYaml")
         } else {
             result + "\n\nproxies:\n$newProxiesYaml"
         }
 
-        // Sisipkan ke grup PROXIES
         result = when {
             result.contains("      - DIRECT") -> {
                 result.replaceFirst("      - DIRECT", "$newGroupEntries      - DIRECT")
@@ -94,6 +91,21 @@ allow-lan: false
 mode: rule
 log-level: silent
 ipv6: false
+
+dns:
+  enable: true
+  listen: 0.0.0.0:1053
+  ipv6: false
+  enhanced-mode: fake-ip
+  fake-ip-range: 198.18.0.1/16
+  nameserver:
+    - 1.1.1.1
+    - 8.8.8.8
+  fake-ip-filter:
+    - "+.stun.*.*"
+    - "+.stun.*.*.*"
+    - "*.twilio.com"
+    - "+.twilio.com"
 """.trimIndent()
     }
 
