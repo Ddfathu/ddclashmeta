@@ -225,6 +225,6 @@
                 <data android:scheme="android_secret_code" android:host="252746382" />
             </intent-filter>
         </receiver>
-        <activity android:name=".EasyConfigActivity" android:label="Config Easy" android:theme="@style/AppTheme" />
+        <activity android:name=".EasyConfigActivity" android:label="Config Easy" />
     </application>
 </manifest>
