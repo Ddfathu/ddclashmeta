@@ -9,260 +9,263 @@ import java.nio.charset.StandardCharsets
 object ProxyLinkConverter {
 
     fun isProxyLink(text: String): Boolean {
-        val t = text.trim()
-        return t.contains("vmess://") || t.contains("vless://") || t.contains("trojan://")
+        val trimmed = text.trim()
+        return trimmed.startsWith("vmess://") ||
+                trimmed.startsWith("vless://") ||
+                trimmed.startsWith("trojan://") ||
+                trimmed.startsWith("ss://")
     }
 
-    fun parseNodes(rawText: String, startIndex: Int = 1): List<Pair<String, String>> {
-        val lines = rawText.lines().map { it.trim() }.filter { it.isNotEmpty() }
-        val result = mutableListOf<Pair<String, String>>()
-        var idx = startIndex
+    // Template YAML Profil Standalone (Ringan & Cepat)
+    fun generateStandaloneYaml(rawLinks: String): Pair<String, String> {
+        val nodes = parseNodes(rawLinks)
+        if (nodes.isEmpty()) throw IllegalArgumentException("Tidak ada node proxy yang valid ditemukan")
 
-        for (line in lines) {
-            try {
-                when {
-                    line.startsWith("vmess://", ignoreCase = true) -> {
-                        parseVmess(line, idx)?.let { result.add(it); idx++ }
-                    }
-                    line.startsWith("vless://", ignoreCase = true) -> {
-                        parseVless(line, idx)?.let { result.add(it); idx++ }
-                    }
-                    line.startsWith("trojan://", ignoreCase = true) -> {
-                        parseTrojan(line, idx)?.let { result.add(it); idx++ }
-                    }
-                }
-            } catch (e: Exception) {}
+        val firstName = nodes.first().name
+        val sb = StringBuilder()
+        sb.append(getBaseConfigHeader())
+
+        sb.append("proxies:\n")
+        nodes.forEach { sb.append(it.toYamlBlock()).append("\n") }
+
+        sb.append("proxy-groups:\n")
+        sb.append("  - name: PROXIES\n")
+        sb.append("    type: select\n")
+        sb.append("    proxies:\n")
+        nodes.forEach { sb.append("      - \"").append(it.name).append("\"\n") }
+        sb.append("      - DIRECT\n\n")
+
+        sb.append(getBaseRulesAndDns())
+        return Pair(sb.toString(), firstName)
+    }
+
+    // Kentang Mode: Menambahkan node baru ke config yang sudah ada atau membuat baru
+    fun appendOrGenerateDirect(existingYaml: String?, rawLinks: String): String {
+        val newNodes = parseNodes(rawLinks)
+        if (newNodes.isEmpty()) throw IllegalArgumentException("Tidak ada proxy yang valid")
+
+        if (existingYaml.isNullOrBlank() || !existingYaml.contains("proxies:")) {
+            val sb = StringBuilder()
+            sb.append(getBaseConfigHeader())
+
+            sb.append("proxies:\n")
+            newNodes.forEach { sb.append(it.toYamlBlock()).append("\n") }
+
+            sb.append("proxy-groups:\n")
+            sb.append("  - name: PROXIES\n")
+            sb.append("    type: select\n")
+            sb.append("    proxies:\n")
+            newNodes.forEach { sb.append("      - \"").append(it.name).append("\"\n") }
+            sb.append("      - DIRECT\n\n")
+
+            sb.append(getBaseRulesAndDns())
+            return sb.toString()
         }
+
+        // Jika config lama sudah ada, sisipkan node baru
+        val newProxiesYaml = buildString {
+            newNodes.forEach { append(it.toYamlBlock()).append("\n") }
+        }
+
+        val newGroupEntries = buildString {
+            newNodes.forEach { append("      - \"").append(it.name).append("\"\n") }
+        }
+
+        var result = existingYaml
+
+        // 1. Sisipkan ke blok proxies:
+        result = if (result.contains("proxies:\n")) {
+            result.replaceFirst("proxies:\n", "proxies:\n$newProxiesYaml")
+        } else {
+            result + "\nproxies:\n$newProxiesYaml"
+        }
+
+        // 2. Sisipkan nama node ke group PROXIES
+        result = if (result.contains("proxies:\n      - DIRECT")) {
+            result.replaceFirst("proxies:\n      - DIRECT", "proxies:\n$newGroupEntries      - DIRECT")
+        } else if (result.contains("proxies:\n      - ")) {
+            result.replaceFirst("proxies:\n      - ", "proxies:\n$newGroupEntries      - ")
+        } else {
+            result
+        }
+
         return result
     }
 
-    // Untuk Opsi 1: Single Profile Full Standalone
-    fun generateStandaloneYaml(rawLinks: String): Pair<String, String> {
-        val nodes = parseNodes(rawLinks)
-        if (nodes.isEmpty()) throw IllegalArgumentException("Tidak ada proxy yang valid")
-        val mainName = nodes.first().second
-        return Pair(generateFullYaml(nodes), mainName)
-    }
-
-    // Untuk Opsi 2: Konfigurasi Induk (Base) dengan Proxy Provider
-    fun generateProviderBaseYaml(): String {
+    private fun getBaseConfigHeader(): String {
         return """
 port: 7890
 socks-port: 7891
 allow-lan: false
 mode: rule
-log-level: info
+log-level: silent
 ipv6: false
 
-proxy-providers:
-  clipboard_nodes:
-    type: file
-    path: ./providers/clipboard.yaml
-    health-check:
-      enable: true
-      interval: 300
-      url: https://www.google.com/generate_204
+""".trimIndent()
+    }
 
-proxy-groups:
-  - name: PROXIES
-    type: select
-    use:
-      - clipboard_nodes
-    proxies:
-      - DIRECT
-
+    private fun getBaseRulesAndDns(): String {
+        return """
 dns:
   enable: true
   ipv6: false
   enhanced-mode: fake-ip
   fake-ip-range: 198.18.0.1/16
   nameserver:
-    - 8.8.8.8
     - 1.1.1.1
-    - https://dns.google/dns-query
+    - 8.8.8.8
+    - 1.0.0.1
   fallback:
     - 8.8.4.4
-    - 1.0.0.1
 
 rules:
   - MATCH,PROXIES
 """.trimIndent()
     }
 
-    // Untuk Opsi 2: Append atau Generate file provider (hanya berisi proxies:)
-    fun appendProviderContent(existingYaml: String?, rawLinks: String): String {
-        val newNodes = parseNodes(rawLinks)
-        if (newNodes.isEmpty()) throw IllegalArgumentException("Tidak ada proxy yang valid")
-
-        val sb = StringBuilder()
-        val existing = existingYaml?.trim().orEmpty()
-
-        if (existing.isEmpty() || !existing.contains("proxies:")) {
-            sb.appendLine("proxies:")
-            newNodes.forEach { sb.append(it.first) }
-            return sb.toString()
-        }
-
-        // Jika sudah ada proxies:, cukup tambahkan baris node baru di paling bawah
-        sb.append(existing)
-        if (!existing.endsWith("\n")) sb.append("\n")
-        newNodes.forEach {
-            sb.append(it.first)
-        }
-        return sb.toString()
+    private fun parseNodes(rawLinks: String): List<ProxyNode> {
+        val list = mutableListOf<ProxyNode>()
+        rawLinks.lineSequence()
+            .map { it.trim() }
+            .filter { it.isNotEmpty() }
+            .forEach { link ->
+                runCatching {
+                    when {
+                        link.startsWith("vmess://") -> parseVmess(link)
+                        link.startsWith("vless://") -> parseVless(link)
+                        link.startsWith("trojan://") -> parseTrojan(link)
+                        else -> null
+                    }
+                }.getOrNull()?.let { list.add(it) }
+            }
+        return list
     }
 
-    private fun generateFullYaml(nodes: List<Pair<String, String>>): String {
-        val sb = StringBuilder()
-        sb.appendLine("port: 7890")
-        sb.appendLine("socks-port: 7891")
-        sb.appendLine("allow-lan: false")
-        sb.appendLine("mode: rule")
-        sb.appendLine("log-level: info")
-        sb.appendLine("ipv6: false")
-        sb.appendLine()
-        sb.appendLine("proxies:")
-        nodes.forEach { sb.append(it.first) }
-        sb.appendLine()
-        sb.appendLine("proxy-groups:")
-        sb.appendLine("  - name: PROXIES")
-        sb.appendLine("    type: select")
-        sb.appendLine("    url: \"https://www.google.com/generate_204\"")
-        sb.appendLine("    interval: 300")
-        sb.appendLine("    proxies:")
-        nodes.forEach { sb.appendLine("      - \"${it.second}\"") }
-        sb.appendLine("      - DIRECT")
-        sb.appendLine()
-        sb.appendLine("dns:")
-        sb.appendLine("  enable: true")
-        sb.appendLine("  ipv6: false")
-        sb.appendLine("  enhanced-mode: fake-ip")
-        sb.appendLine("  fake-ip-range: 198.18.0.1/16")
-        sb.appendLine("  nameserver:")
-        sb.appendLine("    - 8.8.8.8")
-        sb.appendLine("    - 1.1.1.1")
-        sb.appendLine("    - https://dns.google/dns-query")
-        sb.appendLine("  fallback:")
-        sb.appendLine("    - 8.8.4.4")
-        sb.appendLine("    - 1.0.0.1")
-        sb.appendLine()
-        sb.appendLine("rules:")
-        sb.appendLine("  - MATCH,PROXIES")
-
-        return sb.toString()
-    }
-
-    private fun parseVmess(link: String, index: Int): Pair<String, String>? {
-        val b64 = link.substringAfter("vmess://").trim()
+    private fun parseVmess(link: String): ProxyNode {
+        val b64 = link.removePrefix("vmess://").trim()
         val jsonStr = String(Base64.decode(b64, Base64.DEFAULT), StandardCharsets.UTF_8)
         val json = JSONObject(jsonStr)
 
-        val name = json.optString("ps", "vmess-$index").replace("\"", "")
+        val name = json.optString("ps", "vmess_node")
         val server = json.optString("add")
         val port = json.optInt("port")
         val uuid = json.optString("id")
-        val aid = json.optInt("aid", 0)
+        val alterId = json.optInt("aid", 0)
+        val cipher = json.optString("scy", "auto").ifEmpty { "auto" }
         val net = json.optString("net", "tcp")
-        val host = json.optString("host", "")
+        val tls = json.optString("tls")
+        val sni = json.optString("sni", json.optString("host", server))
         val path = json.optString("path", "/")
-        val tls = json.optString("tls") == "tls"
-        val sni = json.optString("sni", host)
 
-        val sb = StringBuilder()
-        sb.appendLine("  - name: \"$name\"")
-        sb.appendLine("    type: vmess")
-        sb.appendLine("    server: $server")
-        sb.appendLine("    port: $port")
-        sb.appendLine("    uuid: $uuid")
-        sb.appendLine("    alterId: $aid")
-        sb.appendLine("    cipher: auto")
-        sb.appendLine("    udp: true")
-        if (tls) {
-            sb.appendLine("    tls: true")
-            sb.appendLine("    skip-cert-verify: true")
-            if (sni.isNotEmpty()) sb.appendLine("    servername: $sni")
-        }
-        sb.appendLine("    network: $net")
-        if (net == "ws") {
-            sb.appendLine("    ws-opts:")
-            sb.appendLine("      path: \"$path\"")
-            if (host.isNotEmpty()) {
-                sb.appendLine("      headers:")
-                sb.appendLine("        Host: \"$host\"")
-            }
-        }
-        return Pair(sb.toString(), name)
+        return ProxyNode(
+            name = name,
+            type = "vmess",
+            server = server,
+            port = port,
+            uuid = uuid,
+            alterId = alterId,
+            cipher = cipher,
+            network = net,
+            tls = tls.equals("tls", true),
+            sni = sni,
+            wsPath = path
+        )
     }
 
-    private fun parseVless(link: String, index: Int): Pair<String, String>? {
+    private fun parseVless(link: String): ProxyNode {
         val uri = Uri.parse(link)
-        val server = uri.host ?: return null
-        val port = if (uri.port > 0) uri.port else 443
-        val uuid = uri.userInfo ?: return null
-        val fragment = uri.fragment ?: "vless-$index"
-        val name = URLDecoder.decode(fragment, "UTF-8").replace("\"", "")
-
-        val type = uri.getQueryParameter("type") ?: "tcp"
+        val name = uri.fragment?.let { URLDecoder.decode(it, "UTF-8") } ?: "vless_node"
+        val server = uri.host ?: ""
+        val port = uri.port
+        val uuid = uri.userInfo ?: ""
+        val net = uri.getQueryParameter("type") ?: "tcp"
         val security = uri.getQueryParameter("security") ?: "none"
-        val sni = uri.getQueryParameter("sni") ?: server
+        val sni = uri.getQueryParameter("sni") ?: uri.getQueryParameter("host") ?: server
         val path = uri.getQueryParameter("path") ?: "/"
-        val host = uri.getQueryParameter("host") ?: ""
 
-        val sb = StringBuilder()
-        sb.appendLine("  - name: \"$name\"")
-        sb.appendLine("    type: vless")
-        sb.appendLine("    server: $server")
-        sb.appendLine("    port: $port")
-        sb.appendLine("    uuid: $uuid")
-        sb.appendLine("    udp: true")
-        if (security == "tls") {
-            sb.appendLine("    tls: true")
-            sb.appendLine("    skip-cert-verify: true")
-            if (sni.isNotEmpty()) sb.appendLine("    servername: $sni")
-        }
-        sb.appendLine("    network: $type")
-        if (type == "ws") {
-            sb.appendLine("    ws-opts:")
-            sb.appendLine("      path: \"$path\"")
-            if (host.isNotEmpty()) {
-                sb.appendLine("      headers:")
-                sb.appendLine("        Host: \"$host\"")
-            }
-        }
-        return Pair(sb.toString(), name)
+        return ProxyNode(
+            name = name,
+            type = "vless",
+            server = server,
+            port = port,
+            uuid = uuid,
+            network = net,
+            tls = security.equals("tls", true) || security.equals("reality", true),
+            sni = sni,
+            wsPath = path
+        )
     }
 
-    private fun parseTrojan(link: String, index: Int): Pair<String, String>? {
+    private fun parseTrojan(link: String): ProxyNode {
         val uri = Uri.parse(link)
-        val server = uri.host ?: return null
-        val port = if (uri.port > 0) uri.port else 443
-        val password = uri.userInfo ?: return null
-        val fragment = uri.fragment ?: "trojan-$index"
-        val name = URLDecoder.decode(fragment, "UTF-8").replace("\"", "")
+        val name = uri.fragment?.let { URLDecoder.decode(it, "UTF-8") } ?: "trojan_node"
+        val server = uri.host ?: ""
+        val port = uri.port
+        val password = uri.userInfo ?: ""
         val sni = uri.getQueryParameter("sni") ?: server
-        val type = uri.getQueryParameter("type") ?: "tcp"
-        val host = uri.getQueryParameter("host") ?: ""
+        val net = uri.getQueryParameter("type") ?: "tcp"
         val path = uri.getQueryParameter("path") ?: "/"
 
-        val sb = StringBuilder()
-        sb.appendLine("  - name: \"$name\"")
-        sb.appendLine("    type: trojan")
-        sb.appendLine("    server: $server")
-        sb.appendLine("    port: $port")
-        sb.appendLine("    password: \"$password\"")
-        sb.appendLine("    udp: true")
-        sb.appendLine("    tls: true")
-        sb.appendLine("    skip-cert-verify: true")
-        sb.appendLine("    sni: $sni")
-        sb.appendLine("    network: $type")
-        if (type == "ws") {
-            sb.appendLine("    ws-opts:")
-            sb.appendLine("      path: \"$path\"")
-            if (host.isNotEmpty()) {
-                sb.appendLine("      headers:")
-                sb.appendLine("        Host: \"$host\"")
+        return ProxyNode(
+            name = name,
+            type = "trojan",
+            server = server,
+            port = port,
+            password = password,
+            network = net,
+            tls = true,
+            sni = sni,
+            wsPath = path
+        )
+    }
+
+    data class ProxyNode(
+        val name: String,
+        val type: String,
+        val server: String,
+        val port: Int,
+        val uuid: String? = null,
+        val password: String? = null,
+        val alterId: Int? = null,
+        val cipher: String? = null,
+        val network: String = "tcp",
+        val tls: Boolean = false,
+        val sni: String? = null,
+        val wsPath: String? = null
+    ) {
+        fun toYamlBlock(): String {
+            val sb = StringBuilder()
+            sb.append("  - name: \"").append(name.replace("\"", "\\\"")).append("\"\n")
+            sb.append("    type: ").append(type).append("\n")
+            sb.append("    server: ").append(server).append("\n")
+            sb.append("    port: ").append(port).append("\n")
+
+            if (uuid != null) sb.append("    uuid: ").append(uuid).append("\n")
+            if (password != null) sb.append("    password: ").append(password).append("\n")
+            if (alterId != null) sb.append("    alterId: ").append(alterId).append("\n")
+            if (cipher != null) sb.append("    cipher: ").append(cipher).append("\n")
+
+            sb.append("    udp: true\n")
+
+            if (tls) {
+                sb.append("    tls: true\n")
+                if (!sni.isNullOrBlank()) {
+                    sb.append("    servername: ").append(sni).append("\n")
+                    sb.append("    sni: ").append(sni).append("\n")
+                }
             }
+
+            if (network.equals("ws", ignoreCase = true)) {
+                sb.append("    network: ws\n")
+                sb.append("    ws-opts:\n")
+                sb.append("      path: \"").append(wsPath ?: "/").append("\"\n")
+                if (!sni.isNullOrBlank()) {
+                    sb.append("      headers:\n")
+                    sb.append("        Host: ").append(sni).append("\n")
+                }
+            }
+
+            return sb.toString().trimEnd()
         }
-        return Pair(sb.toString(), name)
     }
 }

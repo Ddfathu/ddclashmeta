@@ -118,6 +118,7 @@ class NewProfileActivity : BaseActivity<NewProfileDesign>() {
         }
     }
 
+    // Opsi 1: Profil Baru Mandiri
     private suspend fun handleClipboardStandalone() {
         val text = getClipboardText()
         if (text.isBlank() || !ProxyLinkConverter.isProxyLink(text)) {
@@ -157,6 +158,7 @@ class NewProfileActivity : BaseActivity<NewProfileDesign>() {
         }
     }
 
+    // Opsi 2: Kentang Mode (Satu profil, terus bertambah node-nya)
     private suspend fun handleClipboardProviderAppend() {
         val text = getClipboardText()
         if (text.isBlank() || !ProxyLinkConverter.isProxyLink(text)) {
@@ -167,55 +169,44 @@ class NewProfileActivity : BaseActivity<NewProfileDesign>() {
         }
 
         try {
-            val targetName = "Clipboard Provider"
+            val targetName = "Kentang Profile"
             val client = FilesClient(this@NewProfileActivity)
 
             withProfile {
                 val existing = queryAll().firstOrNull { it.name == targetName }
+                val profileId = existing?.uuid ?: create(Profile.Type.File, targetName)
+
+                withContext(Dispatchers.IO) {
+                    val targetUri = client.buildDocumentUri("$profileId/config.yaml")
+                    var oldYaml = ""
+                    try {
+                        contentResolver.openInputStream(targetUri)?.use { stream ->
+                            oldYaml = BufferedReader(InputStreamReader(stream)).readText()
+                        }
+                    } catch (e: Exception) {
+                        oldYaml = ""
+                    }
+
+                    val updatedYaml = ProxyLinkConverter.appendOrGenerateDirect(oldYaml, text)
+
+                    val outputStream = contentResolver.openOutputStream(targetUri, "rwt")
+                        ?: throw IllegalStateException("Gagal membuka file config")
+                    OutputStreamWriter(outputStream).use { it.write(updatedYaml) }
+                }
+
+                // Hanya commit jika profil baru dibuat agar status tersimpan di PendingDao
                 if (existing == null) {
-                    val profileId = create(Profile.Type.File, targetName)
-
-                    withContext(Dispatchers.IO) {
-                        val baseConfigUri = client.buildDocumentUri("$profileId/config.yaml")
-                        contentResolver.openOutputStream(baseConfigUri, "rwt")?.use { os ->
-                            OutputStreamWriter(os).use { it.write(ProxyLinkConverter.generateProviderBaseYaml()) }
-                        }
-
-                        val providerUri = client.buildDocumentUri("$profileId/providers/clipboard.yaml")
-                        val providerContent = ProxyLinkConverter.appendProviderContent(null, text)
-                        contentResolver.openOutputStream(providerUri, "rwt")?.use { os ->
-                            OutputStreamWriter(os).use { it.write(providerContent) }
-                        }
-                    }
-
                     commit(profileId)
-                } else {
-                    withContext(Dispatchers.IO) {
-                        val providerUri = client.buildDocumentUri("${existing.uuid}/providers/clipboard.yaml")
-                        var oldContent = ""
-                        try {
-                            contentResolver.openInputStream(providerUri)?.use { stream ->
-                                oldContent = BufferedReader(InputStreamReader(stream)).readText()
-                            }
-                        } catch (e: Exception) {
-                            oldContent = ""
-                        }
-
-                        val updatedContent = ProxyLinkConverter.appendProviderContent(oldContent, text)
-                        contentResolver.openOutputStream(providerUri, "rwt")?.use { os ->
-                            OutputStreamWriter(os).use { it.write(updatedContent) }
-                        }
-                    }
                 }
 
                 withContext(Dispatchers.Main) {
-                    Toast.makeText(this@NewProfileActivity, "Node berhasil dimasukkan ke Provider!", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this@NewProfileActivity, "Node berhasil ditambahkan ke Kentang Profile!", Toast.LENGTH_SHORT).show()
                     finish()
                 }
             }
         } catch (e: Exception) {
             withContext(Dispatchers.Main) {
-                Toast.makeText(this@NewProfileActivity, "Gagal append provider: ${e.message}", Toast.LENGTH_LONG).show()
+                Toast.makeText(this@NewProfileActivity, "Gagal append kentang: ${e.message}", Toast.LENGTH_LONG).show()
             }
         }
     }
