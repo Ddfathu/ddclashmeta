@@ -11,12 +11,12 @@ import com.github.kr328.clash.design.databinding.DesignAboutBinding
 import com.github.kr328.clash.design.databinding.DesignMainBinding
 import com.github.kr328.clash.design.dialog.AppBottomSheetDialog
 import com.github.kr328.clash.design.util.layoutInflater
+import com.github.kr328.clash.design.util.resolveThemedColor
 import com.github.kr328.clash.design.util.root
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.withContext
 
-class MainDesign(context: Context) : Design<DesignMainBinding>(context) {
+class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
     enum class Request {
         ToggleStatus,
         OpenProxy,
@@ -28,13 +28,15 @@ class MainDesign(context: Context) : Design<DesignMainBinding>(context) {
         OpenAbout,
     }
 
-    override val binding: DesignMainBinding =
-        DesignMainBinding.inflate(context.layoutInflater, context.root, false)
+    val binding = DesignMainBinding
+        .inflate(context.layoutInflater, context.root, false)
 
     override val root: View
         get() = binding.root
 
-    override val requests: Channel<Request> = Channel(Channel.CONFLATED)
+    init {
+        binding.self = this
+    }
 
     suspend fun setProfileName(name: String?) {
         withContext(Dispatchers.Main) {
