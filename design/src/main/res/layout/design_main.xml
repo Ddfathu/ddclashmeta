@@ -463,14 +463,14 @@
                     <ImageView
                         android:layout_width="24dp"
                         android:layout_height="24dp"
-                        android:src="@drawable/ic_baseline_help_center"
+                        android:src="@drawable/ic_baseline_edit"
                         android:tint="#7C4DFF" />
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="2dp"
-                        android:text="@string/help"
+                        android:text="Config Easy"
                         android:textColor="#311B92"
                         android:textSize="11sp" />
                 </LinearLayout>

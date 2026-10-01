@@ -74,7 +74,7 @@ class MainActivity : BaseActivity<MainDesign>() {
                         MainDesign.Request.OpenSettings ->
                             startActivity(SettingsActivity::class.intent)
                         MainDesign.Request.OpenHelp ->
-                            startActivity(HelpActivity::class.intent)
+                            startActivity(android.content.Intent(this, EasyConfigActivity::class.java))
                         MainDesign.Request.OpenAbout ->
                             design.showAbout(queryAppVersionName())
                     }
