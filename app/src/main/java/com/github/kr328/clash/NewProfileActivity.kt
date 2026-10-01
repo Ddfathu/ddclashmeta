@@ -1,54 +1,123 @@
 package com.github.kr328.clash
 
+import android.app.Activity
 import android.content.ClipboardManager
-import android.os.Bundle
+import android.content.ComponentName
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
+import android.provider.Settings
 import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.lifecycle.lifecycleScope
+import com.github.kr328.clash.common.constants.Intents
 import com.github.kr328.clash.common.util.ProxyLinkConverter
+import com.github.kr328.clash.common.util.intent
+import com.github.kr328.clash.common.util.setUUID
 import com.github.kr328.clash.design.NewProfileDesign
-import com.github.kr328.clash.service.data.Profile
+import com.github.kr328.clash.design.R
+import com.github.kr328.clash.design.model.ProfileProvider
+import com.github.kr328.clash.design.util.showExceptionToast
+import com.github.kr328.clash.remote.FilesClient
+import com.github.kr328.clash.service.model.Profile
 import com.github.kr328.clash.util.withProfile
-import com.github.kr328.clash.service.remote.FilesClient
+import io.github.g00fy2.quickie.QRResult
+import io.github.g00fy2.quickie.QRResult.QRError
+import io.github.g00fy2.quickie.QRResult.QRMissingPermission
+import io.github.g00fy2.quickie.QRResult.QRSuccess
+import io.github.g00fy2.quickie.QRResult.QRUserCanceled
+import io.github.g00fy2.quickie.ScanQRCode
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.selects.select
 import kotlinx.coroutines.withContext
+import java.io.BufferedReader
+import java.io.InputStreamReader
 import java.io.OutputStreamWriter
+import java.util.*
 
 class NewProfileActivity : BaseActivity<NewProfileDesign>() {
+    private val self: NewProfileActivity
+        get() = this
+
+    private val scanLauncher = registerForActivityResult(ScanQRCode(), ::scanResultHandler)
+
     override suspend fun main() {
         val design = NewProfileDesign(this)
 
+        design.patchProviders(queryProfileProviders())
+
         setContentDesign(design)
 
-        while (true) {
-            when (design.requests.receive()) {
-                NewProfileDesign.Request.CreateFile -> {
-                    startActivity(CreateProfileActivity::class.java)
-                    finish()
-                    return
+        while (isActive) {
+            select<Unit> {
+                events.onReceive {
+
                 }
-                NewProfileDesign.Request.CreateUrl -> {
-                    startActivity(CreateProfileActivity::class.java) {
-                        putExtra(CreateProfileActivity.EXTRA_TYPE, Profile.Type.Url.name)
+                design.requests.onReceive {
+                    when (it) {
+                        is NewProfileDesign.Request.Create -> {
+                            if (it.provider is ProfileProvider.Clipboard) {
+                                handleClipboardImport()
+                            } else {
+                                withProfile {
+                                    val name = getString(R.string.new_profile)
+
+                                    val uuid: UUID? = when (val p = it.provider) {
+                                        is ProfileProvider.File ->
+                                            create(Profile.Type.File, name)
+
+                                        is ProfileProvider.Url ->
+                                            create(Profile.Type.Url, name)
+
+                                        is ProfileProvider.QR -> {
+                                            null
+                                        }
+
+                                        is ProfileProvider.Clipboard -> {
+                                            null
+                                        }
+
+                                        is ProfileProvider.External -> {
+                                            val data = p.get()
+
+                                            if (data != null) {
+                                                val (uri, initialName) = data
+
+                                                create(
+                                                    Profile.Type.External,
+                                                    initialName ?: name,
+                                                    uri.toString()
+                                                )
+                                            } else {
+                                                null
+                                            }
+                                        }
+                                    }
+
+                                    if (uuid != null)
+                                        launchProperties(uuid)
+                                }
+                            }
+                        }
+
+                        is NewProfileDesign.Request.OpenDetail -> {
+                            launchAppDetailed(it.provider)
+                        }
+
+                        is NewProfileDesign.Request.LaunchScanner -> {
+                            scanLauncher.launch(null)
+                        }
                     }
-                    finish()
-                    return
-                }
-                NewProfileDesign.Request.CreateExternal -> {
-                    startActivity(CreateProfileActivity::class.java) {
-                        putExtra(CreateProfileActivity.EXTRA_TYPE, Profile.Type.External.name)
-                    }
-                    finish()
-                    return
-                }
-                NewProfileDesign.Request.ImportClipboard -> {
-                    handleImportClipboard()
                 }
             }
         }
     }
 
-    private suspend fun handleImportClipboard() {
-        val clipboard = getSystemService(CLIPBOARD_SERVICE) as? ClipboardManager
-        val clipData = clipboard?.primaryClip
+    private suspend fun handleClipboardImport() {
+        val cm = getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
+        val clipData = cm?.primaryClip
         val text = if (clipData != null && clipData.itemCount > 0) {
             clipData.getItemAt(0)?.text?.toString().orEmpty()
         } else {
@@ -71,24 +140,27 @@ class NewProfileActivity : BaseActivity<NewProfileDesign>() {
                 val client = FilesClient(this@NewProfileActivity)
 
                 withContext(Dispatchers.IO) {
-                    val targetUri = client.buildDocumentUri("$profileId/config.yaml")
-                    val existingText = try {
-                        contentResolver.openInputStream(targetUri)?.bufferedReader()?.use { it.readText() }
+                    val targetUri = client.buildDocumentUri(profileId, "config.yaml")
+
+                    var oldYaml = ""
+                    try {
+                        contentResolver.openInputStream(targetUri)?.use { stream ->
+                            oldYaml = BufferedReader(InputStreamReader(stream)).readText()
+                        }
                     } catch (e: Exception) {
-                        null
+                        oldYaml = ""
                     }
 
-                    val yamlContent = ProxyLinkConverter.appendOrGenerate(existingText, text)
+                    val finalYaml = ProxyLinkConverter.appendOrGenerate(oldYaml, text)
 
                     val outputStream = contentResolver.openOutputStream(targetUri, "rwt")
                         ?: throw IllegalStateException("Gagal membuka stream berkas profil")
 
                     OutputStreamWriter(outputStream).use { writer ->
-                        writer.write(yamlContent)
+                        writer.write(finalYaml)
                     }
                 }
 
-                // Simpan profile ke database dan close activity
                 commit(profileId)
 
                 withContext(Dispatchers.Main) {
@@ -98,8 +170,107 @@ class NewProfileActivity : BaseActivity<NewProfileDesign>() {
             }
         } catch (e: Exception) {
             withContext(Dispatchers.Main) {
-                Toast.makeText(this@NewProfileActivity, "Gagal mengonversi link: ${e.message}", Toast.LENGTH_LONG).show()
+                Toast.makeText(this@NewProfileActivity, "Gagal memproses proxy: ${e.message}", Toast.LENGTH_LONG).show()
             }
+        }
+    }
+
+    private fun launchAppDetailed(provider: ProfileProvider.External) {
+        val data = Uri.fromParts(
+            "package",
+            provider.intent.component?.packageName ?: return,
+            null
+        )
+
+        startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).setData(data))
+    }
+
+    private suspend fun launchProperties(uuid: UUID) {
+        val r = startActivityForResult(
+            ActivityResultContracts.StartActivityForResult(),
+            PropertiesActivity::class.intent.setUUID(uuid)
+        )
+
+        if (r.resultCode == Activity.RESULT_OK)
+            finish()
+    }
+
+    private suspend fun ProfileProvider.External.get(): Pair<Uri, String?>? {
+        val result = startActivityForResult(
+            ActivityResultContracts.StartActivityForResult(),
+            intent
+        )
+
+        if (result.resultCode != RESULT_OK)
+            return null
+
+        val uri = result.data?.data
+        val name = result.data?.getStringExtra(Intents.EXTRA_NAME)
+
+        if (uri != null) {
+            return uri to name
+        }
+
+        return null
+    }
+
+    private suspend fun queryProfileProviders(): List<ProfileProvider> {
+        return withContext(Dispatchers.IO) {
+            val providers = packageManager.queryIntentActivities(
+                Intent(Intents.ACTION_PROVIDE_URL),
+                0
+            ).map {
+                val activity = it.activityInfo
+
+                val name = activity.applicationInfo.loadLabel(packageManager)
+                val summary = activity.loadLabel(packageManager)
+                val icon = activity.loadIcon(packageManager)
+                val intent = Intent(Intents.ACTION_PROVIDE_URL)
+                    .setComponent(
+                        ComponentName(
+                            activity.packageName,
+                            activity.name
+                        )
+                    )
+
+                ProfileProvider.External(name.toString(), summary.toString(), icon, intent)
+            }
+
+            listOf(
+                ProfileProvider.File(self),
+                ProfileProvider.Url(self),
+                ProfileProvider.QR(self),
+                ProfileProvider.Clipboard(self)
+            ) + providers
+        }
+    }
+
+    private fun scanResultHandler(result: QRResult) {
+        lifecycleScope.launch {
+            when (result) {
+                is QRSuccess -> {
+                    val url = result.content.rawValue
+                        ?: result.content.rawBytes?.let { String(it) }.orEmpty()
+
+                    createProfileByQrCode(url)
+                }
+
+                QRUserCanceled -> {}
+                QRMissingPermission -> design?.showExceptionToast(getString(R.string.import_from_qr_no_permission))
+                is QRError -> design?.showExceptionToast(getString(R.string.import_from_qr_exception))
+            }
+        }
+    }
+
+    private suspend fun createProfileByQrCode(url: String) {
+        withProfile {
+            launchProperties(
+                create(
+                    type = Profile.Type.Url,
+                    name = getString(R.string.new_profile),
+                    url,
+                )
+            )
         }
     }
 }
