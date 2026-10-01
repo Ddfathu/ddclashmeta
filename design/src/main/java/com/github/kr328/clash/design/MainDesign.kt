@@ -38,6 +38,10 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
         binding.self = this
     }
 
+    fun request(req: Request) {
+        requests.trySend(req)
+    }
+
     suspend fun setProfileName(name: String?) {
         withContext(Dispatchers.Main) {
             binding.profileName = name
