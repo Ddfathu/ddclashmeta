@@ -44,7 +44,14 @@ class FilesActivity : BaseActivity<FilesDesign>() {
             select<Unit> {
                 events.onReceive {
                     when (it) {
-                        Event.ActivityStart, Event.ActivityStop -> {
+                        Event.ActivityStart -> {
+                            // Selalu sinkronkan commit agar editan manual dari text editor tidak ter-rollback saat VPN start
+                            runCatching {
+                                withProfile { commit(uuid) }
+                            }
+                            design.fetch(client, stack, root)
+                        }
+                        Event.ActivityStop -> {
                             design.fetch(client, stack, root)
                         }
                         else -> Unit
@@ -71,14 +78,25 @@ class FilesActivity : BaseActivity<FilesDesign>() {
                                         "text/plain"
                                     ).grantPermissions()
                                 )
+
+                                // Setelah keluar dari editor teks, commit perubahan ke database profil aktif
+                                runCatching {
+                                    withProfile { commit(uuid) }
+                                }
                             }
                             is FilesDesign.Request.DeleteFile -> {
                                 client.deleteDocument(it.file.id)
+                                runCatching {
+                                    withProfile { commit(uuid) }
+                                }
                             }
                             is FilesDesign.Request.RenameFile -> {
                                 val newName = design.requestFileName(it.file.name)
 
                                 client.renameDocument(it.file.id, newName)
+                                runCatching {
+                                    withProfile { commit(uuid) }
+                                }
                             }
                             is FilesDesign.Request.ImportFile -> {
                                 val uri: Uri? = startActivityForResult(
@@ -93,6 +111,9 @@ class FilesActivity : BaseActivity<FilesDesign>() {
                                         client.importDocument(stack.last(), uri, name)
                                     } else {
                                         client.copyDocument(it.file!!.id, uri)
+                                    }
+                                    runCatching {
+                                        withProfile { commit(uuid) }
                                     }
                                 }
                             }
