@@ -158,7 +158,7 @@ class NewProfileActivity : BaseActivity<NewProfileDesign>() {
         }
     }
 
-    // Opsi 2: Kentang Mode (Satu profil, langsung suntik ke config.yaml)
+    // Opsi 2: Kentang Mode (Satu profil, selalu di-commit agar permanen)
     private suspend fun handleClipboardProviderAppend() {
         val text = getClipboardText()
         if (text.isBlank() || !ProxyLinkConverter.isProxyLink(text)) {
@@ -194,9 +194,8 @@ class NewProfileActivity : BaseActivity<NewProfileDesign>() {
                     OutputStreamWriter(outputStream).use { it.write(updatedYaml) }
                 }
 
-                if (existing == null) {
-                    commit(profileId)
-                }
+                // Wajib dipanggil setiap kali ada penambahan node agar database menyinkronkan snapshot terbaru
+                commit(profileId)
 
                 withContext(Dispatchers.Main) {
                     Toast.makeText(this@NewProfileActivity, "Node berhasil disuntik ke Kentang Profile!", Toast.LENGTH_SHORT).show()

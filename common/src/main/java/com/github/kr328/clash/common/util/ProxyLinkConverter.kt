@@ -16,7 +16,6 @@ object ProxyLinkConverter {
                 trimmed.startsWith("ss://")
     }
 
-    // Template YAML Profil Standalone (Ringan & Cepat)
     fun generateStandaloneYaml(rawLinks: String): Pair<String, String> {
         val nodes = parseNodes(rawLinks)
         if (nodes.isEmpty()) throw IllegalArgumentException("Tidak ada node proxy yang valid ditemukan")
@@ -25,8 +24,8 @@ object ProxyLinkConverter {
         val sb = StringBuilder()
         sb.append(getBaseConfigHeader())
 
-        sb.append("proxies:\n")
-        nodes.forEach { sb.append(it.toYamlBlock()).append("\n") }
+        sb.append("\nproxies:\n")
+        nodes.forEach { sb.append(it.toYamlBlock()).append("\n\n") }
 
         sb.append("proxy-groups:\n")
         sb.append("  - name: PROXIES\n")
@@ -39,54 +38,46 @@ object ProxyLinkConverter {
         return Pair(sb.toString(), firstName)
     }
 
-    // Kentang Mode: Menambahkan node baru ke config yang sudah ada atau membuat baru
     fun appendOrGenerateDirect(existingYaml: String?, rawLinks: String): String {
         val newNodes = parseNodes(rawLinks)
         if (newNodes.isEmpty()) throw IllegalArgumentException("Tidak ada proxy yang valid")
 
         if (existingYaml.isNullOrBlank() || !existingYaml.contains("proxies:")) {
-            val sb = StringBuilder()
-            sb.append(getBaseConfigHeader())
-
-            sb.append("proxies:\n")
-            newNodes.forEach { sb.append(it.toYamlBlock()).append("\n") }
-
-            sb.append("proxy-groups:\n")
-            sb.append("  - name: PROXIES\n")
-            sb.append("    type: select\n")
-            sb.append("    proxies:\n")
-            newNodes.forEach { sb.append("      - \"").append(it.name).append("\"\n") }
-            sb.append("      - DIRECT\n\n")
-
-            sb.append(getBaseRulesAndDns())
-            return sb.toString()
+            val (yaml, _) = generateStandaloneYaml(rawLinks)
+            return yaml
         }
 
-        // Jika config lama sudah ada, sisipkan node baru
         val newProxiesYaml = buildString {
-            newNodes.forEach { append(it.toYamlBlock()).append("\n") }
+            newNodes.forEach {
+                append(it.toYamlBlock())
+                append("\n\n")
+            }
         }
 
         val newGroupEntries = buildString {
-            newNodes.forEach { append("      - \"").append(it.name).append("\"\n") }
+            newNodes.forEach {
+                append("      - \"").append(it.name).append("\"\n")
+            }
         }
 
         var result = existingYaml
 
-        // 1. Sisipkan ke blok proxies:
+        // 1. Sisipkan ke blok proxies
         result = if (result.contains("proxies:\n")) {
             result.replaceFirst("proxies:\n", "proxies:\n$newProxiesYaml")
         } else {
-            result + "\nproxies:\n$newProxiesYaml"
+            result + "\n\nproxies:\n$newProxiesYaml"
         }
 
-        // 2. Sisipkan nama node ke group PROXIES
-        result = if (result.contains("proxies:\n      - DIRECT")) {
-            result.replaceFirst("proxies:\n      - DIRECT", "proxies:\n$newGroupEntries      - DIRECT")
-        } else if (result.contains("proxies:\n      - ")) {
-            result.replaceFirst("proxies:\n      - ", "proxies:\n$newGroupEntries      - ")
-        } else {
-            result
+        // 2. Sisipkan ke grup PROXIES
+        result = when {
+            result.contains("      - DIRECT") -> {
+                result.replaceFirst("      - DIRECT", "$newGroupEntries      - DIRECT")
+            }
+            result.contains("    proxies:\n") -> {
+                result.replaceFirst("    proxies:\n", "    proxies:\n$newGroupEntries")
+            }
+            else -> result
         }
 
         return result
@@ -100,7 +91,6 @@ allow-lan: false
 mode: rule
 log-level: silent
 ipv6: false
-
 """.trimIndent()
     }
 
