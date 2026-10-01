@@ -85,7 +85,7 @@ object ProxyLinkConverter {
         sb.appendLine("      - DIRECT")
         sb.appendLine()
         sb.appendLine("rules:")
-        sb.appendLine("  - MATCH,PROXIES")
+        sb.appendLine("  - DST-PORT,53,DIRECT\n  - MATCH,PROXIES")
 
         return sb.toString()
     }

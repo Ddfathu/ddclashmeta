@@ -35,7 +35,7 @@ object ProxyLinkConverter {
         sb.append("      - DIRECT\n\n")
 
         sb.append("rules:\n")
-        sb.append("  - MATCH,PROXIES\n")
+        sb.append("  - DST-PORT,53,DIRECT\n  - MATCH,PROXIES\n")
 
         return Pair(sb.toString(), firstName)
     }
