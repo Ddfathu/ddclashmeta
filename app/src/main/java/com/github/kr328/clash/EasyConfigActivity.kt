@@ -1,9 +1,10 @@
 package com.github.kr328.clash
 
+import android.content.ClipboardManager
+import android.content.Context
 import android.os.Bundle
 import android.text.InputType
 import android.view.Gravity
-import android.view.View
 import android.widget.Button
 import android.widget.EditText
 import android.widget.LinearLayout
@@ -21,7 +22,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.io.File
 import java.util.UUID
 
 class EasyConfigActivity : AppCompatActivity() {
@@ -47,10 +47,20 @@ class EasyConfigActivity : AppCompatActivity() {
         }
 
         val title = TextView(this).apply {
-            text = "Config Easy Editor"
+            text = "Config Editor"
             textSize = 20f
             setTextColor(0xFFFFFFFF.toInt())
             layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+        }
+
+        val btnAdd = Button(this).apply {
+            text = "+"
+            textSize = 18f
+            setTextColor(0xFF00E676.toInt())
+            setBackgroundColor(0x3300E676.toInt())
+            setOnClickListener {
+                importFromClipboard()
+            }
         }
 
         val btnClear = Button(this).apply {
@@ -72,11 +82,12 @@ class EasyConfigActivity : AppCompatActivity() {
         }
 
         headerLayout.addView(title)
+        headerLayout.addView(btnAdd)
         headerLayout.addView(btnClear)
         headerLayout.addView(btnSave)
         rootLayout.addView(headerLayout)
 
-        // Editor Input (Monospace font, tanpa autocorrect perusak YAML)
+        // Text Editor
         val scrollView = ScrollView(this).apply {
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
@@ -92,7 +103,7 @@ class EasyConfigActivity : AppCompatActivity() {
             typeface = android.graphics.Typeface.MONOSPACE
             textSize = 13f
             setTextColor(0xFFE0E0E0.toInt())
-            hint = "# Tempel daftar node Anda di sini:\n- name: \"Node 1\"\n  server: ...\n- name: \"Node 2\"\n  server: ..."
+            hint = "# Klik tombol (+) di atas untuk import link VLESS/VMess/Trojan dari clipboard\natau ketik/paste manual blok YAML di sini."
             setHintTextColor(0xFF757575.toInt())
             setBackgroundColor(0xFF1E1E1E.toInt())
             setPadding(24, 24, 24, 24)
@@ -109,10 +120,59 @@ class EasyConfigActivity : AppCompatActivity() {
         loadExistingConfig()
     }
 
+    private fun importFromClipboard() {
+        val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+        val clipData = clipboard.primaryClip
+        if (clipData == null || clipData.itemCount == 0) {
+            Toast.makeText(this, "Clipboard kosong!", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        val text = clipData.getItemAt(0).text?.toString()?.trim() ?: ""
+        if (text.isEmpty()) {
+            Toast.makeText(this, "Clipboard kosong!", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        val lines = text.split("\n").map { it.trim() }.filter { it.isNotEmpty() }
+        val parsedNodes = mutableListOf<String>()
+
+        for (line in lines) {
+            val nodeYaml = EasyConfigManager.parseLinkToNodeYaml(line)
+            if (nodeYaml != null) {
+                parsedNodes.add(nodeYaml)
+            }
+        }
+
+        if (parsedNodes.isNotEmpty()) {
+            val combined = parsedNodes.joinToString("\n\n")
+            val currentText = editText.text.toString().trim()
+            if (currentText.isEmpty()) {
+                editText.setText(combined)
+            } else {
+                editText.setText("$currentText\n\n$combined")
+            }
+            Toast.makeText(this, "Berhasil menambahkan ${parsedNodes.size} node!", Toast.LENGTH_SHORT).show()
+        } else if (text.startsWith("- name:") || text.contains("server:")) {
+            val currentText = editText.text.toString().trim()
+            if (currentText.isEmpty()) {
+                editText.setText(text)
+            } else {
+                editText.setText("$currentText\n\n$text")
+            }
+            Toast.makeText(this, "Berhasil menempelkan YAML node!", Toast.LENGTH_SHORT).show()
+        } else {
+            Toast.makeText(this, "Format link tidak didukung!", Toast.LENGTH_SHORT).show()
+        }
+    }
+
     private fun loadExistingConfig() {
         scope.launch(Dispatchers.IO) {
             val dao = ImportedDao()
-            val existing = dao.queryAll().firstOrNull { it.name == profileName }
+            val existing = dao.queryAllUUIDs()
+                .mapNotNull { dao.queryByUUID(it) }
+                .firstOrNull { it.name == profileName }
+
             if (existing != null) {
                 val file = this@EasyConfigActivity.importedDir.resolve(existing.uuid.toString()).resolve("config.yaml")
                 if (file.exists()) {
@@ -136,7 +196,9 @@ class EasyConfigActivity : AppCompatActivity() {
         scope.launch(Dispatchers.IO) {
             try {
                 val dao = ImportedDao()
-                var target = dao.queryAll().firstOrNull { it.name == profileName }
+                var target = dao.queryAllUUIDs()
+                    .mapNotNull { dao.queryByUUID(it) }
+                    .firstOrNull { it.name == profileName }
                 val targetUuid = target?.uuid ?: UUID.randomUUID()
 
                 val profileDir = this@EasyConfigActivity.importedDir.resolve(targetUuid.toString())
