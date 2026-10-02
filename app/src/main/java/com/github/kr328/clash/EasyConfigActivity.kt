@@ -147,13 +147,21 @@ class EasyConfigActivity : AppCompatActivity() {
 
         if (parsedNodes.isNotEmpty()) {
             val combined = parsedNodes.joinToString("\n\n")
-            val currentText = editText.text.toString().trim()
-            if (currentText.isEmpty()) {
-                editText.setText(combined)
-            } else {
-                editText.setText("$currentText\n\n$combined")
-            }
-            Toast.makeText(this, "Berhasil menambahkan ${parsedNodes.size} node!", Toast.LENGTH_SHORT).show()
+            val modes = EasyConfigManager.DnsMode.values()
+            val modeLabels = modes.map { it.displayName }.toTypedArray()
+
+            AlertDialog.Builder(this)
+                .setTitle("Pilih Mode DNS")
+                .setItems(modeLabels) { _, which ->
+                    val selectedMode = modes[which]
+                    val fullConfig = EasyConfigManager.buildFullConfig(combined, selectedMode)
+                    editText.setText(fullConfig)
+                    Toast.makeText(this, "Config dibuat (${selectedMode.displayName})", Toast.LENGTH_SHORT).show()
+                }
+                .setNegativeButton("Hanya Node (Tanpa Header)") { _, _ ->
+                    editText.setText(combined)
+                }
+                .show()
         } else if (text.startsWith("- name:") || text.contains("server:")) {
             val currentText = editText.text.toString().trim()
             if (currentText.isEmpty()) {

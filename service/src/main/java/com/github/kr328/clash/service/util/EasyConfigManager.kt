@@ -19,11 +19,15 @@ object EasyConfigManager {
 mixed-port: 7890
 allow-lan: false
 mode: rule
-log-level: silent
+log-level: warning
 ipv6: false
 tcp-concurrent: true
 find-process-mode: off
 global-client-fingerprint: chrome
+
+# Trik keep-alive & performa socket
+keep-alive-idle: 30
+keep-alive-interval: 15
 """.trimIndent()
 
         val dnsBlock = when (dnsMode) {
@@ -34,9 +38,15 @@ dns:
   ipv6: false
   enhanced-mode: fake-ip
   fake-ip-range: 198.18.0.1/16
+  fake-ip-filter:
+    - "*.lan"
+    - "*.local"
+  default-nameserver:
+    - 114.114.114.114
+    - 8.8.8.8
   nameserver:
     - https://dns.google/dns-query
-    - 1.1.1.1
+    - https://1.1.1.1/dns-query
     - 8.8.8.8
   direct-nameserver:
     - system
@@ -60,7 +70,7 @@ dns:
 """.trimIndent()
         }
 
-        return baseHeader + "\n" + dnsBlock + "\n\nproxies:\n"
+        return baseHeader + "\n\n" + dnsBlock + "\n\nproxies:\n"
     }
 
     private val HEADER_TEMPLATE = generateHeader(DnsMode.REDIR_HOST)
@@ -233,7 +243,10 @@ dns:
         sb.append("      - DIRECT\n\n")
 
         sb.append("rules:\n")
-        sb.append("  - DST-PORT,53,DIRECT\n  - MATCH,PROXIES\n")
+        sb.append("  # Bypass DNS & local network\n")
+        sb.append("  - GEOIP,private,DIRECT,no-resolve\n")
+        sb.append("  # Traffic lainnya diarahkan ke proxy\n")
+        sb.append("  - MATCH,PROXIES\n")
 
         return sb.toString()
     }
