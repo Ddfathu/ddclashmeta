@@ -211,8 +211,13 @@ class MainActivity : BaseActivity<MainDesign>() {
     }
 
     private suspend fun MainDesign.fetchTraffic() {
-        withClash {
-            setTraffic(queryTrafficTotal())
+        if (!clashRunning) return
+        runCatching {
+            withClash {
+                if (clashRunning) {
+                    setTraffic(queryTrafficTotal())
+                }
+            }
         }
     }
 
