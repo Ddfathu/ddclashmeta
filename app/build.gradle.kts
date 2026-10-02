@@ -17,6 +17,12 @@ android {
         versionName = "1.0.0"
     }
 
+    packaging {
+        jniLibs {
+            useLegacyPackaging = true
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false
