@@ -184,7 +184,7 @@ class MainActivity : BaseActivity<MainDesign>() {
         }
     }
 
-    private suspend fun MainDesign.design.fetch() {
+    private suspend fun MainDesign.fetch() {
         setClashRunning(clashRunning)
 
         val state = withClash {
@@ -212,7 +212,7 @@ class MainActivity : BaseActivity<MainDesign>() {
         }
     }
 
-    private suspend fun MainDesign.design.startClash() {
+    private suspend fun MainDesign.startClash() {
         val active = withProfile { queryActive() }
 
         if (active == null || !active.imported) {
