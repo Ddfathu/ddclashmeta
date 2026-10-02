@@ -85,8 +85,7 @@ object ProxyLinkConverter {
 
     private fun getBaseConfigHeader(): String {
         return """
-port: 7890
-socks-port: 7891
+mixed-port: 7890
 allow-lan: false
 mode: rule
 log-level: silent

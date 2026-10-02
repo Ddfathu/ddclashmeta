@@ -58,8 +58,7 @@ object ProxyLinkConverter {
         }
 
         val sb = StringBuilder()
-        sb.appendLine("port: 7890")
-        sb.appendLine("socks-port: 7891")
+        sb.appendLine("mixed-port: 7890")
         sb.appendLine("allow-lan: false")
         sb.appendLine("mode: rule")
         sb.appendLine("log-level: silent")

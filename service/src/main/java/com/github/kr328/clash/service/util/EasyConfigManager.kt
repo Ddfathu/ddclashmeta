@@ -8,11 +8,7 @@ import java.util.regex.Pattern
 
 object EasyConfigManager {
 
-    private const val HEADER_TEMPLATE = """port: 7890
-socks-port: 7891
-redir-port: 7892
-tproxy-port: 7893
-mixed-port: 7890
+    private const val HEADER_TEMPLATE = """mixed-port: 7890
 allow-lan: false
 mode: rule
 log-level: silent
