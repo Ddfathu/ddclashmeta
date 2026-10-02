@@ -33,8 +33,20 @@
         android:id="@+id/profile_active_label"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:layout_marginEnd="12dp"
         android:text="AKTIF"
         android:textColor="#00C853"
         android:textSize="11sp"
         android:textStyle="bold" />
+
+    <ImageView
+        android:id="@+id/profile_edit"
+        android:layout_width="22dp"
+        android:layout_height="22dp"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:clickable="true"
+        android:focusable="true"
+        android:padding="2dp"
+        android:src="@drawable/ic_baseline_edit"
+        android:tint="#757575" />
 </LinearLayout>

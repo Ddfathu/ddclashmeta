@@ -1,4 +1,14 @@
 package com.github.kr328.clash
+import android.content.ClipboardManager
+import android.content.Context
+import android.widget.Toast
+import com.github.kr328.clash.FilesActivity
+import com.github.kr328.clash.service.ProfileProcessor
+import com.github.kr328.clash.service.data.Imported
+import com.github.kr328.clash.service.data.ImportedDao
+import com.github.kr328.clash.service.util.EasyConfigManager
+import com.github.kr328.clash.service.util.importedDir
+
 
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -85,8 +95,81 @@ class MainActivity : BaseActivity<MainDesign>() {
                         }
                         MainDesign.Request.OpenSettings ->
                             startActivity(SettingsActivity::class.intent)
-                        MainDesign.Request.OpenHelp ->
-                            startActivity(EasyConfigActivity::class.intent)
+                        MainDesign.Request.OpenHelp -> {
+                            val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                            val clipData = clipboard.primaryClip
+                            val clipText = if (clipData != null && clipData.itemCount > 0) {
+                                clipData.getItemAt(0).text?.toString()?.trim() ?: ""
+                            } else ""
+
+                            if (clipText.isEmpty()) {
+                                Toast.makeText(this@MainActivity, "Clipboard kosong! Salin link proxy dulu.", Toast.LENGTH_SHORT).show()
+                            } else {
+                                GlobalScope.launch(Dispatchers.IO) {
+                                    try {
+                                        val lines = clipText.lines().map { it.trim() }.filter { it.isNotEmpty() }
+                                        val parsedNodes = mutableListOf<String>()
+                                        for (line in lines) {
+                                            val nodeYaml = EasyConfigManager.parseLinkToNodeYaml(line)
+                                            if (nodeYaml != null) parsedNodes.add(nodeYaml)
+                                        }
+
+                                        val rawYaml = if (parsedNodes.isNotEmpty()) {
+                                            parsedNodes.joinToString("\n\n")
+                                        } else if (clipText.contains("proxies:")) {
+                                            clipText
+                                        } else {
+                                            null
+                                        }
+
+                                        if (rawYaml == null) {
+                                            withContext(Dispatchers.Main) {
+                                                Toast.makeText(this@MainActivity, "Format link/YAML di clipboard tidak valid!", Toast.LENGTH_SHORT).show()
+                                            }
+                                            return@launch
+                                        }
+
+                                        val proxyNames = EasyConfigManager.extractProxyNames(rawYaml)
+                                        val targetUuid = UUID.randomUUID()
+                                        val targetName = proxyNames.firstOrNull() ?: "Auto-${System.currentTimeMillis() % 10000}"
+
+                                        val profileDir = this@MainActivity.importedDir.resolve(targetUuid.toString())
+                                        profileDir.mkdirs()
+                                        val fullConfig = EasyConfigManager.buildFullConfig(rawYaml)
+                                        profileDir.resolve("config.yaml").writeText(fullConfig)
+
+                                        val dao = ImportedDao()
+                                        val newProfile = Imported(
+                                            uuid = targetUuid,
+                                            name = targetName,
+                                            type = Profile.Type.File,
+                                            source = "clipboard",
+                                            interval = 0,
+                                            upload = 0,
+                                            download = 0,
+                                            total = 0,
+                                            expire = 0,
+                                            updated = System.currentTimeMillis()
+                                        )
+                                        dao.insert(newProfile)
+                                        ProfileProcessor.active(this@MainActivity, targetUuid)
+
+                                        withContext(Dispatchers.Main) {
+                                            Toast.makeText(this@MainActivity, "Profil "$targetName" berhasil dibuat & aktif!", Toast.LENGTH_SHORT).show()
+                                            fetch()
+                                            if (clashRunning) {
+                                                stopClashService()
+                                                startClash()
+                                            }
+                                        }
+                                    } catch (e: Exception) {
+                                        withContext(Dispatchers.Main) {
+                                            Toast.makeText(this@MainActivity, "Gagal import: ${e.message}", Toast.LENGTH_LONG).show()
+                                        }
+                                    }
+                                }
+                            }
+                        }
                         MainDesign.Request.OpenAbout ->
                             design.showAbout(queryAppVersionName())
                     }
@@ -246,6 +329,11 @@ class MainActivity : BaseActivity<MainDesign>() {
                 val tvTitle = holder.itemView.findViewById<TextView>(DesignR.id.profile_title)
                 val ivIcon = holder.itemView.findViewById<ImageView>(DesignR.id.profile_icon)
                 val tvLabel = holder.itemView.findViewById<TextView>(DesignR.id.profile_active_label)
+                val btnEdit = holder.itemView.findViewById<ImageView>(DesignR.id.profile_edit)
+
+                btnEdit?.setOnClickListener {
+                    startActivity(FilesActivity::class.intent.setUUID(item.uuid))
+                }
 
                 tvTitle.text = item.name
                 if (isActive) {
