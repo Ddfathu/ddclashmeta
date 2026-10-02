@@ -29,6 +29,13 @@ golang {
 }
 
 android {
+    defaultConfig {
+        ndk {
+            abiFilters.clear()
+            abiFilters.addAll(listOf("arm64-v8a", "armeabi-v7a"))
+        }
+    }
+
     productFlavors {
         all {
             externalNativeBuild {
