@@ -306,7 +306,7 @@ class NewProfileActivity : BaseActivity<NewProfileDesign>() {
                         if (groupIdx != -1) {
                             val listIdx = updatedYaml.indexOf("    proxies:\n", groupIdx)
                             if (listIdx != -1) {
-                                updatedYaml.insert(listIdx + "    proxies:\n".length, "      - "$name"\n")
+                                updatedYaml.insert(listIdx + "    proxies:\n".length, "      - \"$name\"\n")
                             }
                         }
                     }
