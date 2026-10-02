@@ -80,7 +80,6 @@ class MainActivity : BaseActivity<MainDesign>() {
                         MainDesign.Request.ToggleStatus -> {
                             launch {
                                 if (clashRunning) {
-                                    clashRunning = false
                                     design.setClashRunning(false)
                                     withContext(Dispatchers.IO) {
                                         try {
@@ -174,9 +173,13 @@ class MainActivity : BaseActivity<MainDesign>() {
                                                         Toast.makeText(this@MainActivity, "Profil $targetName ($selectedMode) berhasil dibuat & aktif!", Toast.LENGTH_SHORT).show()
                                                         design.fetch()
                                                         if (clashRunning) {
-                                                            clashRunning = false
                                                             design.setClashRunning(false)
-                                                            startClash()
+                                                            withContext(Dispatchers.IO) {
+                                                                try {
+                                                                    stopClashService()
+                                                                } catch (_: Exception) {}
+                                                            }
+                                                            design.startClash()
                                                         }
                                                     }
                                                 } catch (e: Exception) {
