@@ -63,7 +63,7 @@ class ProfilesActivity : BaseActivity<ProfilesDesign>() {
                             withProfile { delete(it.profile.uuid) }
                         is ProfilesDesign.Request.Edit -> {
                             if (it.profile.type == Profile.Type.File) {
-                                startActivity(EasyConfigActivity::class.intent.setUUID(it.profile.uuid))
+                                startActivity(ConfigEditorActivity::class.intent.setUUID(it.profile.uuid))
                             } else {
                                 startActivity(PropertiesActivity::class.intent.setUUID(it.profile.uuid))
                             }
