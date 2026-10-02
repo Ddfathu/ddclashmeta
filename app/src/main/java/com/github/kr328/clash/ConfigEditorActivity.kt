@@ -5,7 +5,7 @@ import android.widget.Button
 import android.widget.EditText
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import com.github.kr328.clash.common.util.getUUID
+import com.github.kr328.clash.common.util.uuid
 import com.github.kr328.clash.service.util.importedDir
 import com.github.kr328.clash.design.R as DesignR
 import kotlinx.coroutines.*
@@ -24,14 +24,14 @@ class ConfigEditorActivity : AppCompatActivity(), CoroutineScope by MainScope() 
         etConfig = findViewById(DesignR.id.et_config)
         btnSave = findViewById(DesignR.id.btn_save)
 
-        val uuid = intent.getUUID()
-        if (uuid == null) {
+        val targetUuid = intent.uuid
+        if (targetUuid == null) {
             Toast.makeText(this, "UUID Profil tidak valid", Toast.LENGTH_SHORT).show()
             finish()
             return
         }
 
-        val targetDir = this.importedDir.resolve(uuid.toString())
+        val targetDir = this.importedDir.resolve(targetUuid.toString())
         configFile = targetDir.resolve("config.yaml")
 
         launch(Dispatchers.IO) {

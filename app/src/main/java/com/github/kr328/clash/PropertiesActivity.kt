@@ -58,7 +58,7 @@ class PropertiesActivity : BaseActivity<PropertiesDesign>() {
                 design.requests.onReceive {
                     when (it) {
                         PropertiesDesign.Request.BrowseFiles -> {
-                            startActivity(FilesActivity::class.intent.setUUID(uuid))
+                            startActivity(ConfigEditorActivity::class.intent.setUUID(uuid))
                         }
                         PropertiesDesign.Request.Commit -> {
                             design.verifyAndCommit()
