@@ -182,7 +182,11 @@
             android:configChanges="uiMode"
             android:exported="false"
             android:label="@string/help" />
-        <activity
+                <activity
+            android:name=".ConfigEditorActivity"
+            android:label="Config Editor"
+            android:windowSoftInputMode="adjustResize" />
+<activity
             android:name=".FilesActivity"
             android:configChanges="uiMode"
             android:exported="false"

@@ -4,6 +4,7 @@ import android.content.Context
 import android.widget.Toast
 import java.util.UUID
 import com.github.kr328.clash.FilesActivity
+import com.github.kr328.clash.ConfigEditorActivity
 import com.github.kr328.clash.common.util.setUUID
 import com.github.kr328.clash.service.ProfileProcessor
 import com.github.kr328.clash.service.data.Imported
@@ -76,10 +77,13 @@ class MainActivity : BaseActivity<MainDesign>() {
                 design.requests.onReceive {
                     when (it) {
                         MainDesign.Request.ToggleStatus -> {
-                            if (clashRunning)
-                                stopClashService()
-                            else
-                                design.startClash()
+                            launch {
+                                if (clashRunning) {
+                                    stopClashService()
+                                } else {
+                                    design.startClash()
+                                }
+                            }
                         }
                         MainDesign.Request.OpenProxy ->
                             startActivity(ProxyActivity::class.intent)
@@ -333,7 +337,7 @@ class MainActivity : BaseActivity<MainDesign>() {
                 val btnEdit = holder.itemView.findViewById<ImageView>(DesignR.id.profile_edit)
 
                 btnEdit?.setOnClickListener {
-                    startActivity(FilesActivity::class.intent.setUUID(item.uuid))
+                    startActivity(ConfigEditorActivity::class.intent.setUUID(item.uuid))
                 }
 
                 tvTitle.text = item.name
