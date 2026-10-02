@@ -24,7 +24,6 @@ golang {
         all {
             fileName.set("libclash.so")
             packageName.set("cfa/native")
-            flags.add("-ldflags=-s -w")
         }
     }
 }
@@ -60,6 +59,7 @@ dependencies {
 afterEvaluate {
     tasks.withType(GolangBuildTask::class.java).forEach {
         it.inputs.dir(golangSource)
+        it.environment("GOFLAGS", "-ldflags=-s -w")
     }
 }
 
