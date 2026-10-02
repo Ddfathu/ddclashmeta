@@ -9,6 +9,7 @@ import com.github.kr328.clash.core.util.trafficTotal
 import com.github.kr328.clash.core.util.trafficUpload
 import com.github.kr328.clash.design.databinding.DesignAboutBinding
 import com.github.kr328.clash.design.databinding.DesignMainBinding
+import androidx.recyclerview.widget.RecyclerView
 import com.github.kr328.clash.design.dialog.AppBottomSheetDialog
 import com.github.kr328.clash.design.util.layoutInflater
 import com.github.kr328.clash.design.util.resolveThemedColor
@@ -30,6 +31,9 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
 
     private val binding = DesignMainBinding
         .inflate(context.layoutInflater, context.root, false)
+
+        val profilesRecyclerView: RecyclerView
+        get() = binding.mainProfilesList
 
     override val root: View
         get() = binding.root

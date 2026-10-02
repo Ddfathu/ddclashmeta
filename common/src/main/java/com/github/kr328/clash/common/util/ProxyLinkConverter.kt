@@ -90,6 +90,9 @@ allow-lan: false
 mode: rule
 log-level: silent
 ipv6: false
+tcp-concurrent: true
+find-process-mode: off
+global-client-fingerprint: chrome
 
 dns:
   enable: true
@@ -97,8 +100,11 @@ dns:
   ipv6: false
   enhanced-mode: redir-host
   nameserver:
+    - https://dns.google/dns-query
     - 1.1.1.1
     - 8.8.8.8
+  direct-nameserver:
+    - system
 """.trimIndent()
     }
 

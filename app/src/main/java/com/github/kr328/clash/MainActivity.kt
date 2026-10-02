@@ -15,6 +15,16 @@ import androidx.core.graphics.drawable.IconCompat
 import com.github.kr328.clash.common.constants.Intents
 import com.github.kr328.clash.common.util.intent
 import com.github.kr328.clash.common.util.ticker
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
+import android.view.LayoutInflater
+import android.view.View
+import android.view.ViewGroup
+import android.widget.ImageView
+import android.widget.TextView
+import com.github.kr328.clash.service.model.Profile
+import com.github.kr328.clash.service.ProfileProcessor
+
 import com.github.kr328.clash.design.MainDesign
 import com.github.kr328.clash.design.ui.ToastDuration
 import com.github.kr328.clash.util.startClashService
@@ -23,6 +33,8 @@ import com.github.kr328.clash.util.withClash
 import com.github.kr328.clash.util.withProfile
 import com.github.kr328.clash.core.bridge.*
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.selects.select
 import kotlinx.coroutines.withContext
@@ -101,8 +113,12 @@ class MainActivity : BaseActivity<MainDesign>() {
         setMode(state.mode)
         setHasProviders(providers.isNotEmpty())
 
-        withProfile {
-            setProfileName(queryActive()?.name)
+        val allProfiles = withProfile { queryAll() }
+        val activeProfile = withProfile { queryActive() }
+        setProfileName(activeProfile?.name)
+
+        withContext(Dispatchers.Main) {
+            setupProfilesList(allProfiles, activeProfile)
         }
     }
 
@@ -210,5 +226,55 @@ class MainActivity : BaseActivity<MainDesign>() {
             .build()
 
         ShortcutManagerCompat.setDynamicShortcuts(this, listOf(toggle, start, stop))
+    }
+
+    private fun MainDesign.setupProfilesList(profiles: List<Profile>, active: Profile?) {
+        val rv = profilesRecyclerView
+        rv.layoutManager = LinearLayoutManager(this@MainActivity)
+        rv.adapter = object : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
+            override fun getItemCount(): Int = profiles.size
+
+            override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
+                val view = LayoutInflater.from(parent.context).inflate(DesignR.layout.item_main_profile, parent, false)
+                return object : RecyclerView.ViewHolder(view) {}
+            }
+
+            override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
+                val item = profiles[position]
+                val isActive = item.id == active?.id
+
+                val tvTitle = holder.itemView.findViewById<TextView>(DesignR.id.profile_title)
+                val ivIcon = holder.itemView.findViewById<ImageView>(DesignR.id.profile_icon)
+                val tvLabel = holder.itemView.findViewById<TextView>(DesignR.id.profile_active_label)
+
+                tvTitle.text = item.name
+                if (isActive) {
+                    ivIcon.setImageResource(DesignR.drawable.ic_baseline_check_circle)
+                    ivIcon.setColorFilter(0xFF00C853.toInt())
+                    tvLabel.visibility = View.VISIBLE
+                    holder.itemView.setBackgroundColor(0x1500C853)
+                } else {
+                    ivIcon.setImageResource(DesignR.drawable.ic_baseline_radio_button_unchecked)
+                    ivIcon.setColorFilter(0xFFB0BEC5.toInt())
+                    tvLabel.visibility = View.GONE
+                    holder.itemView.setBackgroundResource(android.R.drawable.list_selector_background)
+                }
+
+                holder.itemView.setOnClickListener {
+                    if (!isActive) {
+                        GlobalScope.launch(Dispatchers.Main) {
+                            withContext(Dispatchers.IO) {
+                                ProfileProcessor.active(this@MainActivity, item.uuid)
+                            }
+                            fetch()
+                            if (clashRunning) {
+                                stopClashService()
+                                startClash()
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 }
