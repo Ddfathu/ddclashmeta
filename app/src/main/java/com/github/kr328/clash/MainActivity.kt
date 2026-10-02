@@ -355,10 +355,10 @@ class MainActivity : BaseActivity<MainDesign>() {
                             withContext(Dispatchers.IO) {
                                 ProfileProcessor.active(this@MainActivity, item.uuid)
                             }
-                            design.fetch()
+                            design?.fetch()
                             if (clashRunning) {
                                 stopClashService()
-                                design.startClash()
+                                design?.startClash()
                             }
                         }
                     }
