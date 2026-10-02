@@ -4,6 +4,7 @@ import android.content.Context
 import android.widget.Toast
 import java.util.UUID
 import com.github.kr328.clash.FilesActivity
+import com.github.kr328.clash.util.setUUID
 import com.github.kr328.clash.service.ProfileProcessor
 import com.github.kr328.clash.service.data.Imported
 import com.github.kr328.clash.service.data.ImportedDao
@@ -57,7 +58,7 @@ class MainActivity : BaseActivity<MainDesign>() {
 
         setContentDesign(design)
 
-        design.fetch()
+        design.design.fetch()
 
         val ticker = ticker(TimeUnit.SECONDS.toMillis(1))
 
@@ -68,7 +69,7 @@ class MainActivity : BaseActivity<MainDesign>() {
                         Event.ActivityStart,
                         Event.ServiceRecreated,
                         Event.ClashStop, Event.ClashStart,
-                        Event.ProfileLoaded, Event.ProfileChanged -> design.fetch()
+                        Event.ProfileLoaded, Event.ProfileChanged -> design.design.fetch()
                         else -> Unit
                     }
                 }
@@ -78,7 +79,7 @@ class MainActivity : BaseActivity<MainDesign>() {
                             if (clashRunning)
                                 stopClashService()
                             else
-                                design.startClash()
+                                design.design.startClash()
                         }
                         MainDesign.Request.OpenProxy ->
                             startActivity(ProxyActivity::class.intent)
@@ -156,10 +157,10 @@ class MainActivity : BaseActivity<MainDesign>() {
 
                                         withContext(Dispatchers.Main) {
                                             Toast.makeText(this@MainActivity, "Profil $targetName berhasil dibuat & aktif!", Toast.LENGTH_SHORT).show()
-                                            fetch()
+                                            design.fetch()
                                             if (clashRunning) {
                                                 stopClashService()
-                                                startClash()
+                                                design.startClash()
                                             }
                                         }
                                     } catch (e: Exception) {
@@ -183,7 +184,7 @@ class MainActivity : BaseActivity<MainDesign>() {
         }
     }
 
-    private suspend fun MainDesign.fetch() {
+    private suspend fun MainDesign.design.fetch() {
         setClashRunning(clashRunning)
 
         val state = withClash {
@@ -211,7 +212,7 @@ class MainActivity : BaseActivity<MainDesign>() {
         }
     }
 
-    private suspend fun MainDesign.startClash() {
+    private suspend fun MainDesign.design.startClash() {
         val active = withProfile { queryActive() }
 
         if (active == null || !active.imported) {
@@ -354,10 +355,10 @@ class MainActivity : BaseActivity<MainDesign>() {
                             withContext(Dispatchers.IO) {
                                 ProfileProcessor.active(this@MainActivity, item.uuid)
                             }
-                            fetch()
+                            design.fetch()
                             if (clashRunning) {
                                 stopClashService()
-                                startClash()
+                                design.startClash()
                             }
                         }
                     }
