@@ -15,7 +15,8 @@ object EasyConfigManager {
     }
 
     fun generateHeader(dnsMode: DnsMode = DnsMode.REDIR_HOST): String {
-        val baseHeader = """mixed-port: 7890
+        val baseHeader = """
+mixed-port: 7890
 allow-lan: false
 mode: rule
 log-level: silent
@@ -23,11 +24,11 @@ ipv6: false
 tcp-concurrent: true
 find-process-mode: off
 global-client-fingerprint: chrome
-
 """.trimIndent()
 
         val dnsBlock = when (dnsMode) {
-            DnsMode.FAKE_IP -> """dns:
+            DnsMode.FAKE_IP -> """
+dns:
   enable: true
   listen: 0.0.0.0:1053
   ipv6: false
@@ -38,8 +39,10 @@ global-client-fingerprint: chrome
     - 1.1.1.1
     - 8.8.8.8
   direct-nameserver:
-    - system"""
-            DnsMode.REDIR_HOST -> """dns:
+    - system
+""".trimIndent()
+            DnsMode.REDIR_HOST -> """
+dns:
   enable: true
   listen: 0.0.0.0:1053
   ipv6: false
@@ -49,16 +52,15 @@ global-client-fingerprint: chrome
     - 1.1.1.1
     - 8.8.8.8
   direct-nameserver:
-    - system"""
-            DnsMode.DIRECT -> """dns:
-  enable: false"""
+    - system
+""".trimIndent()
+            DnsMode.DIRECT -> """
+dns:
+  enable: false
+""".trimIndent()
         }
 
-        return baseHeader + "
-" + dnsBlock + "
-
-proxies:
-"
+        return baseHeader + "\n" + dnsBlock + "\n\nproxies:\n"
     }
 
     private val HEADER_TEMPLATE = generateHeader(DnsMode.REDIR_HOST)
