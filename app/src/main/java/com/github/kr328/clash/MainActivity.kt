@@ -155,7 +155,7 @@ class MainActivity : BaseActivity<MainDesign>() {
                                         ProfileProcessor.active(this@MainActivity, targetUuid)
 
                                         withContext(Dispatchers.Main) {
-                                            Toast.makeText(this@MainActivity, "Profil "$targetName" berhasil dibuat & aktif!", Toast.LENGTH_SHORT).show()
+                                            Toast.makeText(this@MainActivity, "Profil $targetName berhasil dibuat & aktif!", Toast.LENGTH_SHORT).show()
                                             fetch()
                                             if (clashRunning) {
                                                 stopClashService()
