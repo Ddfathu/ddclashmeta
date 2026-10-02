@@ -117,7 +117,7 @@ class EasyConfigActivity : AppCompatActivity() {
         rootLayout.addView(scrollView)
         setContentView(rootLayout)
 
-        loadExistingConfig()
+        // loadExistingConfig() -> Editor siap membuat profil mandiri
     }
 
     private fun importFromClipboard() {
@@ -166,7 +166,7 @@ class EasyConfigActivity : AppCompatActivity() {
         }
     }
 
-    private fun loadExistingConfig() {
+    private fun // loadExistingConfig() -> Editor siap membuat profil mandiri {
         scope.launch(Dispatchers.IO) {
             val dao = ImportedDao()
             val existing = dao.queryAllUUIDs()
@@ -189,45 +189,51 @@ class EasyConfigActivity : AppCompatActivity() {
     private fun saveConfig() {
         val rawText = editText.text.toString().trim()
         if (rawText.isEmpty()) {
-            Toast.makeText(this, "Node tidak boleh kosong!", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "Node / Config tidak boleh kosong!", Toast.LENGTH_SHORT).show()
             return
         }
 
         scope.launch(Dispatchers.IO) {
             try {
+                // Ambil nama node jika ada, atau buat nama profil unik berdasarkan waktu
+                val proxyNames = EasyConfigManager.extractProxyNames(rawText)
+                val targetName = proxyNames.firstOrNull() ?: "Config-${System.currentTimeMillis() % 10000}"
+
                 val dao = ImportedDao()
-                var target = dao.queryAllUUIDs()
-                    .mapNotNull { dao.queryByUUID(it) }
-                    .firstOrNull { it.name == profileName }
-                val targetUuid = target?.uuid ?: UUID.randomUUID()
+                val targetUuid = UUID.randomUUID()
 
                 val profileDir = this@EasyConfigActivity.importedDir.resolve(targetUuid.toString())
                 if (!profileDir.exists()) profileDir.mkdirs()
 
-                val fullConfig = EasyConfigManager.buildFullConfig(rawText)
+                // Jika user paste link mentah/node mentah, bungkus jadi full config.
+                // Jika sudah full config (ada mixed-port), gunakan langsung.
+                val fullConfig = if (rawText.contains("mixed-port:") || rawText.contains("port:")) {
+                    rawText
+                } else {
+                    EasyConfigManager.buildFullConfig(rawText)
+                }
+
                 val targetFile = profileDir.resolve("config.yaml")
                 targetFile.writeText(fullConfig, Charsets.UTF_8)
 
-                if (target == null) {
-                    target = Imported(
-                        uuid = targetUuid,
-                        name = profileName,
-                        type = Profile.Type.File,
-                        source = targetFile.absolutePath,
-                        interval = 0,
-                        upload = 0,
-                        download = 0,
-                        total = 0,
-                        expire = 0,
-                        createdAt = System.currentTimeMillis()
-                    )
-                    dao.insert(target)
-                }
+                val newProfile = Imported(
+                    uuid = targetUuid,
+                    name = targetName,
+                    type = Profile.Type.File,
+                    source = targetFile.absolutePath,
+                    interval = 0,
+                    upload = 0,
+                    download = 0,
+                    total = 0,
+                    expire = 0,
+                    createdAt = System.currentTimeMillis()
+                )
+                dao.insert(newProfile)
 
                 ProfileProcessor.active(this@EasyConfigActivity, targetUuid)
 
                 withContext(Dispatchers.Main) {
-                    Toast.makeText(this@EasyConfigActivity, "Config Easy berhasil disimpan & diaktifkan!", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this@EasyConfigActivity, "Profil \"$targetName\" berhasil dibuat & aktif!", Toast.LENGTH_SHORT).show()
                     finish()
                 }
             } catch (e: Exception) {
