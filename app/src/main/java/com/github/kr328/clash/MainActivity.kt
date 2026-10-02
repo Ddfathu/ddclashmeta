@@ -2,6 +2,7 @@ package com.github.kr328.clash
 import android.content.ClipboardManager
 import android.content.Context
 import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
 import java.util.UUID
 import com.github.kr328.clash.FilesActivity
 import com.github.kr328.clash.ConfigEditorActivity
@@ -79,7 +80,14 @@ class MainActivity : BaseActivity<MainDesign>() {
                         MainDesign.Request.ToggleStatus -> {
                             launch {
                                 if (clashRunning) {
-                                    stopClashService()
+                                    clashRunning = false
+                                    design.setClashRunning(false)
+                                    withContext(Dispatchers.IO) {
+                                        try {
+                                            stopClashService()
+                                        } catch (_: Exception) {}
+                                    }
+                                    design.fetch()
                                 } else {
                                     design.startClash()
                                 }
@@ -110,68 +118,76 @@ class MainActivity : BaseActivity<MainDesign>() {
                             if (clipText.isEmpty()) {
                                 Toast.makeText(this@MainActivity, "Clipboard kosong! Salin link proxy dulu.", Toast.LENGTH_SHORT).show()
                             } else {
-                                GlobalScope.launch(Dispatchers.IO) {
-                                    try {
-                                        val lines = clipText.lines().map { it.trim() }.filter { it.isNotEmpty() }
-                                        val parsedNodes = mutableListOf<String>()
-                                        for (line in lines) {
-                                            val nodeYaml = EasyConfigManager.parseLinkToNodeYaml(line)
-                                            if (nodeYaml != null) parsedNodes.add(nodeYaml)
-                                        }
+                                val lines = clipText.lines().map { it.trim() }.filter { it.isNotEmpty() }
+                                val parsedNodes = mutableListOf<String>()
+                                for (line in lines) {
+                                    val nodeYaml = EasyConfigManager.parseLinkToNodeYaml(line)
+                                    if (nodeYaml != null) parsedNodes.add(nodeYaml)
+                                }
 
-                                        val rawYaml = if (parsedNodes.isNotEmpty()) {
-                                            parsedNodes.joinToString("\n\n")
-                                        } else if (clipText.contains("proxies:")) {
-                                            clipText
-                                        } else {
-                                            null
-                                        }
+                                val rawYaml = if (parsedNodes.isNotEmpty()) {
+                                    parsedNodes.joinToString("\n\n")
+                                } else if (clipText.contains("proxies:")) {
+                                    clipText
+                                } else {
+                                    null
+                                }
 
-                                        if (rawYaml == null) {
-                                            withContext(Dispatchers.Main) {
-                                                Toast.makeText(this@MainActivity, "Format link/YAML di clipboard tidak valid!", Toast.LENGTH_SHORT).show()
+                                if (rawYaml == null) {
+                                    Toast.makeText(this@MainActivity, "Format link/YAML di clipboard tidak valid!", Toast.LENGTH_SHORT).show()
+                                } else {
+                                    val modes = EasyConfigManager.DnsMode.values()
+                                    val modeLabels = modes.map { it.displayName }.toTypedArray()
+
+                                    AlertDialog.Builder(this@MainActivity)
+                                        .setTitle("Pilih Mode DNS")
+                                        .setItems(modeLabels) { _, which ->
+                                            val selectedMode = modes[which]
+                                            GlobalScope.launch(Dispatchers.IO) {
+                                                try {
+                                                    val proxyNames = EasyConfigManager.extractProxyNames(rawYaml)
+                                                    val targetUuid = UUID.randomUUID()
+                                                    val targetName = proxyNames.firstOrNull() ?: "Auto-${System.currentTimeMillis() % 10000}"
+
+                                                    val profileDir = this@MainActivity.importedDir.resolve(targetUuid.toString())
+                                                    profileDir.mkdirs()
+                                                    val fullConfig = EasyConfigManager.buildFullConfig(rawYaml, selectedMode)
+                                                    profileDir.resolve("config.yaml").writeText(fullConfig)
+
+                                                    val dao = ImportedDao()
+                                                    val newProfile = Imported(
+                                                        uuid = targetUuid,
+                                                        name = targetName,
+                                                        type = Profile.Type.File,
+                                                        source = "clipboard",
+                                                        interval = 0,
+                                                        upload = 0,
+                                                        download = 0,
+                                                        total = 0,
+                                                        expire = 0,
+                                                        createdAt = System.currentTimeMillis()
+                                                    )
+                                                    dao.insert(newProfile)
+                                                    ProfileProcessor.active(this@MainActivity, targetUuid)
+
+                                                    withContext(Dispatchers.Main) {
+                                                        Toast.makeText(this@MainActivity, "Profil $targetName ($selectedMode) berhasil dibuat & aktif!", Toast.LENGTH_SHORT).show()
+                                                        design.fetch()
+                                                        if (clashRunning) {
+                                                            clashRunning = false
+                                                            design.setClashRunning(false)
+                                                            startClash()
+                                                        }
+                                                    }
+                                                } catch (e: Exception) {
+                                                    withContext(Dispatchers.Main) {
+                                                        Toast.makeText(this@MainActivity, "Gagal membuat profil: ${e.message}", Toast.LENGTH_LONG).show()
+                                                    }
+                                                }
                                             }
-                                            return@launch
                                         }
-
-                                        val proxyNames = EasyConfigManager.extractProxyNames(rawYaml)
-                                        val targetUuid = UUID.randomUUID()
-                                        val targetName = proxyNames.firstOrNull() ?: "Auto-${System.currentTimeMillis() % 10000}"
-
-                                        val profileDir = this@MainActivity.importedDir.resolve(targetUuid.toString())
-                                        profileDir.mkdirs()
-                                        val fullConfig = EasyConfigManager.buildFullConfig(rawYaml)
-                                        profileDir.resolve("config.yaml").writeText(fullConfig)
-
-                                        val dao = ImportedDao()
-                                        val newProfile = Imported(
-                                            uuid = targetUuid,
-                                            name = targetName,
-                                            type = Profile.Type.File,
-                                            source = "clipboard",
-                                            interval = 0,
-                                            upload = 0,
-                                            download = 0,
-                                            total = 0,
-                                            expire = 0,
-                                            createdAt = System.currentTimeMillis()
-                                        )
-                                        dao.insert(newProfile)
-                                        ProfileProcessor.active(this@MainActivity, targetUuid)
-
-                                        withContext(Dispatchers.Main) {
-                                            Toast.makeText(this@MainActivity, "Profil $targetName berhasil dibuat & aktif!", Toast.LENGTH_SHORT).show()
-                                            design.fetch()
-                                            if (clashRunning) {
-                                                stopClashService()
-                                                design.startClash()
-                                            }
-                                        }
-                                    } catch (e: Exception) {
-                                        withContext(Dispatchers.Main) {
-                                            Toast.makeText(this@MainActivity, "Gagal import: ${e.message}", Toast.LENGTH_LONG).show()
-                                        }
-                                    }
+                                        .setNegativeButton("Batal", null)
+                                        .show()
                                 }
                             }
                         }

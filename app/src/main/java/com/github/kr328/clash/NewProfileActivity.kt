@@ -8,6 +8,8 @@ import android.content.Intent
 import android.net.Uri
 import android.provider.Settings
 import android.widget.Toast
+import com.github.kr328.clash.service.util.EasyConfigManager
+import androidx.appcompat.app.AlertDialog
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.lifecycle.lifecycleScope
 import com.github.kr328.clash.common.constants.Intents
@@ -121,90 +123,212 @@ class NewProfileActivity : BaseActivity<NewProfileDesign>() {
     // Opsi 1: Profil Baru Mandiri
     private suspend fun handleClipboardStandalone() {
         val text = getClipboardText()
-        if (text.isBlank() || !ProxyLinkConverter.isProxyLink(text)) {
+        if (text.isBlank()) {
             withContext(Dispatchers.Main) {
-                Toast.makeText(this@NewProfileActivity, "Clipboard tidak berisi link vless/vmess/trojan", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this@NewProfileActivity, "Clipboard kosong!", Toast.LENGTH_SHORT).show()
             }
             return
         }
 
-        try {
-            val (yamlContent, nodeName) = ProxyLinkConverter.generateStandaloneYaml(text)
-            val time = SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(Date())
-            val profileName = "$nodeName ($time)"
+        val lines = text.lines().map { it.trim() }.filter { it.isNotEmpty() }
+        val parsedNodes = mutableListOf<String>()
+        for (line in lines) {
+            val nodeYaml = EasyConfigManager.parseLinkToNodeYaml(line)
+            if (nodeYaml != null) parsedNodes.add(nodeYaml)
+        }
 
-            withProfile {
-                val profileId = create(Profile.Type.File, profileName)
-                val client = FilesClient(this@NewProfileActivity)
+        val rawYaml = if (parsedNodes.isNotEmpty()) {
+            parsedNodes.joinToString("\n\n")
+        } else if (text.contains("proxies:")) {
+            text
+        } else {
+            null
+        }
 
-                withContext(Dispatchers.IO) {
-                    val targetUri = client.buildDocumentUri("$profileId/config.yaml")
-                    val outputStream = contentResolver.openOutputStream(targetUri, "rwt")
-                        ?: throw IllegalStateException("Gagal membuka file config.yaml")
-                    OutputStreamWriter(outputStream).use { it.write(yamlContent) }
-                }
-
-                commit(profileId)
-
-                withContext(Dispatchers.Main) {
-                    Toast.makeText(this@NewProfileActivity, "Profil '$profileName' berhasil dibuat!", Toast.LENGTH_SHORT).show()
-                    finish()
-                }
-            }
-        } catch (e: Exception) {
+        if (rawYaml == null) {
             withContext(Dispatchers.Main) {
-                Toast.makeText(this@NewProfileActivity, "Gagal import standalone: ${e.message}", Toast.LENGTH_LONG).show()
+                Toast.makeText(this@NewProfileActivity, "Clipboard tidak berisi link vless/vmess/trojan yang valid", Toast.LENGTH_SHORT).show()
             }
+            return
+        }
+
+        withContext(Dispatchers.Main) {
+            val modes = EasyConfigManager.DnsMode.values()
+            val modeLabels = modes.map { it.displayName }.toTypedArray()
+
+            AlertDialog.Builder(this@NewProfileActivity)
+                .setTitle("Pilih Mode DNS")
+                .setItems(modeLabels) { _, which ->
+                    val selectedMode = modes[which]
+                    lifecycleScope.launch(Dispatchers.IO) {
+                        try {
+                            val proxyNames = EasyConfigManager.extractProxyNames(rawYaml)
+                            val nodeName = proxyNames.firstOrNull() ?: "Proxy"
+                            val time = SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(Date())
+                            val profileName = "$nodeName ($time)"
+                            val fullConfig = EasyConfigManager.buildFullConfig(rawYaml, selectedMode)
+
+                            withProfile {
+                                val profileId = create(Profile.Type.File, profileName)
+                                val client = FilesClient(this@NewProfileActivity)
+
+                                val targetUri = client.buildDocumentUri("$profileId/config.yaml")
+                                val outputStream = contentResolver.openOutputStream(targetUri, "rwt")
+                                    ?: throw IllegalStateException("Gagal membuka file config.yaml")
+                                OutputStreamWriter(outputStream).use { it.write(fullConfig) }
+
+                                commit(profileId)
+
+                                withContext(Dispatchers.Main) {
+                                    Toast.makeText(this@NewProfileActivity, "Profil '$profileName' ($selectedMode) berhasil dibuat!", Toast.LENGTH_SHORT).show()
+                                    finish()
+                                }
+                            }
+                        } catch (e: Exception) {
+                            withContext(Dispatchers.Main) {
+                                Toast.makeText(this@NewProfileActivity, "Gagal membuat profil: ${e.message}", Toast.LENGTH_LONG).show()
+                            }
+                        }
+                    }
+                }
+                .setNegativeButton("Batal", null)
+                .show()
         }
     }
 
     // Opsi 2: Kentang Mode (Satu profil, selalu di-commit agar permanen)
     private suspend fun handleClipboardProviderAppend() {
         val text = getClipboardText()
-        if (text.isBlank() || !ProxyLinkConverter.isProxyLink(text)) {
+        if (text.isBlank()) {
             withContext(Dispatchers.Main) {
-                Toast.makeText(this@NewProfileActivity, "Clipboard tidak berisi link vless/vmess/trojan", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this@NewProfileActivity, "Clipboard kosong!", Toast.LENGTH_SHORT).show()
             }
             return
         }
 
-        try {
-            val targetName = "Kentang Profile"
-            val client = FilesClient(this@NewProfileActivity)
+        val lines = text.lines().map { it.trim() }.filter { it.isNotEmpty() }
+        val parsedNodes = mutableListOf<String>()
+        for (line in lines) {
+            val nodeYaml = EasyConfigManager.parseLinkToNodeYaml(line)
+            if (nodeYaml != null) parsedNodes.add(nodeYaml)
+        }
 
-            withProfile {
-                val existing = queryAll().firstOrNull { it.name == targetName }
-                val profileId = existing?.uuid ?: create(Profile.Type.File, targetName)
+        val rawYaml = if (parsedNodes.isNotEmpty()) {
+            parsedNodes.joinToString("\n\n")
+        } else if (text.contains("proxies:")) {
+            text
+        } else {
+            null
+        }
 
+        if (rawYaml == null) {
+            withContext(Dispatchers.Main) {
+                Toast.makeText(this@NewProfileActivity, "Clipboard tidak berisi link proxy yang valid!", Toast.LENGTH_SHORT).show()
+            }
+            return
+        }
+
+        val targetName = "Kentang Profile"
+        val client = FilesClient(this@NewProfileActivity)
+
+        // Cek apakah Kentang Profile sudah memiliki file config
+        var existingYaml = ""
+        var profileIdFound: java.util.UUID? = null
+
+        withProfile {
+            val existing = queryAll().firstOrNull { it.name == targetName }
+            if (existing != null) {
+                profileIdFound = existing.uuid
                 withContext(Dispatchers.IO) {
-                    val targetUri = client.buildDocumentUri("$profileId/config.yaml")
-                    var oldYaml = ""
                     try {
+                        val targetUri = client.buildDocumentUri("${existing.uuid}/config.yaml")
                         contentResolver.openInputStream(targetUri)?.use { stream ->
-                            oldYaml = BufferedReader(InputStreamReader(stream)).readText()
+                            existingYaml = BufferedReader(InputStreamReader(stream)).readText().trim()
                         }
-                    } catch (e: Exception) {
-                        oldYaml = ""
-                    }
-
-                    val updatedYaml = ProxyLinkConverter.appendOrGenerateDirect(oldYaml, text)
-
-                    val outputStream = contentResolver.openOutputStream(targetUri, "rwt")
-                        ?: throw IllegalStateException("Gagal membuka file config.yaml")
-                    OutputStreamWriter(outputStream).use { it.write(updatedYaml) }
-                }
-
-                // Wajib dipanggil setiap kali ada penambahan node agar database menyinkronkan snapshot terbaru
-                commit(profileId)
-
-                withContext(Dispatchers.Main) {
-                    Toast.makeText(this@NewProfileActivity, "Node berhasil disuntik ke Kentang Profile!", Toast.LENGTH_SHORT).show()
-                    finish()
+                    } catch (_: Exception) {}
                 }
             }
-        } catch (e: Exception) {
+        }
+
+        // Jika config lama belum ada, tanyakan mode DNS terlebih dahulu
+        if (existingYaml.isBlank() || !existingYaml.contains("proxies:")) {
             withContext(Dispatchers.Main) {
-                Toast.makeText(this@NewProfileActivity, "Gagal append kentang: ${e.message}", Toast.LENGTH_LONG).show()
+                val modes = EasyConfigManager.DnsMode.values()
+                val modeLabels = modes.map { it.displayName }.toTypedArray()
+
+                AlertDialog.Builder(this@NewProfileActivity)
+                    .setTitle("Inisialisasi Kentang (Pilih Mode DNS)")
+                    .setItems(modeLabels) { _, which ->
+                        val selectedMode = modes[which]
+                        lifecycleScope.launch(Dispatchers.IO) {
+                            try {
+                                val fullConfig = EasyConfigManager.buildFullConfig(rawYaml, selectedMode)
+                                withProfile {
+                                    val pid = profileIdFound ?: create(Profile.Type.File, targetName)
+                                    val targetUri = client.buildDocumentUri("$pid/config.yaml")
+                                    val outputStream = contentResolver.openOutputStream(targetUri, "rwt")
+                                        ?: throw IllegalStateException("Gagal membuka config.yaml")
+                                    OutputStreamWriter(outputStream).use { it.write(fullConfig) }
+                                    commit(pid)
+                                }
+                                withContext(Dispatchers.Main) {
+                                    Toast.makeText(this@NewProfileActivity, "Kentang Profile diinisialisasi (${selectedMode.displayName})!", Toast.LENGTH_SHORT).show()
+                                    finish()
+                                }
+                            } catch (e: Exception) {
+                                withContext(Dispatchers.Main) {
+                                    Toast.makeText(this@NewProfileActivity, "Gagal membuat kentang: ${e.message}", Toast.LENGTH_LONG).show()
+                                }
+                            }
+                        }
+                    }
+                    .setNegativeButton("Batal", null)
+                    .show()
+            }
+        } else {
+            // Jika sudah ada, langsung append node ke profil yang ada
+            lifecycleScope.launch(Dispatchers.IO) {
+                try {
+                    val nodeNames = EasyConfigManager.extractProxyNames(rawYaml)
+                    val updatedYaml = StringBuilder(existingYaml)
+
+                    // Sisipkan node baru ke blok proxies:
+                    val proxiesIndex = updatedYaml.indexOf("proxies:")
+                    if (proxiesIndex != -1) {
+                        val insertPos = proxiesIndex + "proxies:\n".length
+                        val indented = rawYaml.lines().joinToString("\n") { "  $it" }
+                        updatedYaml.insert(insertPos, indented + "\n")
+                    }
+
+                    // Tambahkan nama proxy ke kelompok PROXIES
+                    for (name in nodeNames) {
+                        val groupIdx = updatedYaml.indexOf("  - name: PROXIES")
+                        if (groupIdx != -1) {
+                            val listIdx = updatedYaml.indexOf("    proxies:\n", groupIdx)
+                            if (listIdx != -1) {
+                                updatedYaml.insert(listIdx + "    proxies:\n".length, "      - "$name"\n")
+                            }
+                        }
+                    }
+
+                    withProfile {
+                        val pid = profileIdFound!!
+                        val targetUri = client.buildDocumentUri("$pid/config.yaml")
+                        val outputStream = contentResolver.openOutputStream(targetUri, "rwt")
+                            ?: throw IllegalStateException("Gagal membuka config.yaml")
+                        OutputStreamWriter(outputStream).use { it.write(updatedYaml.toString()) }
+                        commit(pid)
+                    }
+
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(this@NewProfileActivity, "Berhasil menyuntikkan node ke Kentang Profile!", Toast.LENGTH_SHORT).show()
+                        finish()
+                    }
+                } catch (e: Exception) {
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(this@NewProfileActivity, "Gagal append node: ${e.message}", Toast.LENGTH_LONG).show()
+                    }
+                }
             }
         }
     }
