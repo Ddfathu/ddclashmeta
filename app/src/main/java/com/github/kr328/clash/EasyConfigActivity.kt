@@ -166,7 +166,12 @@ class EasyConfigActivity : AppCompatActivity() {
         }
     }
 
-    private fun // loadExistingConfig() -> Editor siap membuat profil mandiri {
+        // loadExistingConfig() dinonaktifkan: setiap link disimpan mandiri
+    private fun loadExistingConfig() {
+        // no-op: mode profil mandiri
+    }
+
+    private fun legacyLoader() {
         scope.launch(Dispatchers.IO) {
             val dao = ImportedDao()
             val existing = dao.queryAllUUIDs()
