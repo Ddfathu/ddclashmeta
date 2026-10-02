@@ -2,6 +2,7 @@ package com.github.kr328.clash
 import android.content.ClipboardManager
 import android.content.Context
 import android.widget.Toast
+import java.util.UUID
 import com.github.kr328.clash.FilesActivity
 import com.github.kr328.clash.service.ProfileProcessor
 import com.github.kr328.clash.service.data.Imported
@@ -33,7 +34,6 @@ import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
 import com.github.kr328.clash.service.model.Profile
-import com.github.kr328.clash.service.ProfileProcessor
 
 import com.github.kr328.clash.design.MainDesign
 import com.github.kr328.clash.design.ui.ToastDuration
@@ -149,7 +149,7 @@ class MainActivity : BaseActivity<MainDesign>() {
                                             download = 0,
                                             total = 0,
                                             expire = 0,
-                                            updated = System.currentTimeMillis()
+                                            createdAt = System.currentTimeMillis()
                                         )
                                         dao.insert(newProfile)
                                         ProfileProcessor.active(this@MainActivity, targetUuid)
