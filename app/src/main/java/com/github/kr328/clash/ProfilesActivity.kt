@@ -11,6 +11,7 @@ import com.github.kr328.clash.design.ProfilesDesign
 import com.github.kr328.clash.design.ui.ToastDuration
 import com.github.kr328.clash.service.model.Profile
 import com.github.kr328.clash.util.withProfile
+import com.github.kr328.clash.EasyConfigActivity
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -60,8 +61,13 @@ class ProfilesActivity : BaseActivity<ProfilesDesign>() {
                             withProfile { update(it.profile.uuid) }
                         is ProfilesDesign.Request.Delete ->
                             withProfile { delete(it.profile.uuid) }
-                        is ProfilesDesign.Request.Edit ->
-                            startActivity(PropertiesActivity::class.intent.setUUID(it.profile.uuid))
+                        is ProfilesDesign.Request.Edit -> {
+                            if (it.profile.type == Profile.Type.File) {
+                                startActivity(EasyConfigActivity::class.intent.setUUID(it.profile.uuid))
+                            } else {
+                                startActivity(PropertiesActivity::class.intent.setUUID(it.profile.uuid))
+                            }
+                        }
                         is ProfilesDesign.Request.Active -> {
                             withProfile {
                                 if (it.profile.imported)
