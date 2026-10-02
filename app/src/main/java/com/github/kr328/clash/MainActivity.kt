@@ -241,7 +241,7 @@ class MainActivity : BaseActivity<MainDesign>() {
 
             override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
                 val item = profiles[position]
-                val isActive = item.id == active?.id
+                val isActive = item.uuid == active?.uuid
 
                 val tvTitle = holder.itemView.findViewById<TextView>(DesignR.id.profile_title)
                 val ivIcon = holder.itemView.findViewById<ImageView>(DesignR.id.profile_icon)
