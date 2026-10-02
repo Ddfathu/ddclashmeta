@@ -8,7 +8,14 @@ import java.util.regex.Pattern
 
 object EasyConfigManager {
 
-        private const val HEADER_TEMPLATE = """mixed-port: 7890
+    enum class DnsMode(val displayName: String) {
+        FAKE_IP("Fake-IP (Rekomendasi Cepat)"),
+        REDIR_HOST("Redir-Host (Standar/Kompatibel)"),
+        DIRECT("Tanpa DNS Internal (Ikut Sistem)")
+    }
+
+    fun generateHeader(dnsMode: DnsMode = DnsMode.REDIR_HOST): String {
+        val baseHeader = """mixed-port: 7890
 allow-lan: false
 mode: rule
 log-level: silent
@@ -17,7 +24,22 @@ tcp-concurrent: true
 find-process-mode: off
 global-client-fingerprint: chrome
 
-dns:
+""".trimIndent()
+
+        val dnsBlock = when (dnsMode) {
+            DnsMode.FAKE_IP -> """dns:
+  enable: true
+  listen: 0.0.0.0:1053
+  ipv6: false
+  enhanced-mode: fake-ip
+  fake-ip-range: 198.18.0.1/16
+  nameserver:
+    - https://dns.google/dns-query
+    - 1.1.1.1
+    - 8.8.8.8
+  direct-nameserver:
+    - system"""
+            DnsMode.REDIR_HOST -> """dns:
   enable: true
   listen: 0.0.0.0:1053
   ipv6: false
@@ -27,10 +49,19 @@ dns:
     - 1.1.1.1
     - 8.8.8.8
   direct-nameserver:
-    - system
+    - system"""
+            DnsMode.DIRECT -> """dns:
+  enable: false"""
+        }
+
+        return baseHeader + "
+" + dnsBlock + "
 
 proxies:
-"""
+"
+    }
+
+    private val HEADER_TEMPLATE = generateHeader(DnsMode.REDIR_HOST)
 
     // 1. Ekstrak hanya nama node (- name: "...")
     fun extractProxyNames(rawNodes: String): List<String> {
@@ -174,7 +205,7 @@ proxies:
     }
 
     // 3. Gabungkan semua node mentah menjadi config utuh (dipanggil saat tombol SIMPAN ditekan)
-    fun buildFullConfig(rawNodes: String): String {
+    fun buildFullConfig(rawNodes: String, dnsMode: DnsMode = DnsMode.REDIR_HOST): String {
         val sanitizedNodes = rawNodes
             .replace("\u201C", "\"")
             .replace("\u201D", "\"")
@@ -187,7 +218,7 @@ proxies:
         val names = extractProxyNames(sanitizedNodes)
 
         val sb = StringBuilder()
-        sb.append(HEADER_TEMPLATE)
+        sb.append(generateHeader(dnsMode))
         sb.append(sanitizedNodes).append("\n\n")
 
         sb.append("proxy-groups:\n")

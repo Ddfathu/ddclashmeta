@@ -3,50 +3,61 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:background="?android:attr/colorBackground">
+    android:background="#1E1E1E">
 
-    <RelativeLayout
+    <!-- Top Action Bar -->
+    <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="56dp"
+        android:layout_height="?android:attr/actionBarSize"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:background="#1A2238"
         android:paddingLeft="16dp"
-        android:paddingRight="16dp"
-        android:background="#2E3A59">
+        android:paddingRight="16dp">
 
         <TextView
-            android:layout_width="wrap_content"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_centerVertical="true"
+            android:layout_weight="1"
             android:text="Editor Konfigurasi"
-            android:textColor="@android:color/white"
+            android:textColor="#FFFFFF"
             android:textSize="18sp"
             android:textStyle="bold" />
 
         <Button
             android:id="@+id/btn_save"
             android:layout_width="wrap_content"
-            android:layout_height="38dp"
-            android:layout_alignParentEnd="true"
-            android:layout_centerVertical="true"
-            android:text="Simpan"
-            android:textSize="14sp" />
-    </RelativeLayout>
+            android:layout_height="wrap_content"
+            android:text="SIMPAN"
+            android:textColor="#FFFFFF"
+            android:textStyle="bold"
+            android:backgroundTint="#2563EB" />
+    </LinearLayout>
 
+    <!-- Scrollable Text Area -->
     <ScrollView
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:fillViewport="true">
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:fillViewport="true"
+        android:clipToPadding="false">
 
         <EditText
             android:id="@+id/et_config"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:background="@null"
-            android:fontFamily="monospace"
             android:gravity="top|start"
-            android:hint="Memuat konfigurasi..."
-            android:importantForAutofill="no"
+            android:background="@null"
+            android:paddingLeft="16dp"
+            android:paddingRight="16dp"
+            android:paddingTop="16dp"
+            android:paddingBottom="280dp"
+            android:fontFamily="monospace"
+            android:textSize="13sp"
+            android:textColor="#E0E0E0"
+            android:textColorHint="#757575"
             android:inputType="textMultiLine|textNoSuggestions"
-            android:padding="16dp"
-            android:textSize="13sp" />
+            android:scrollbars="vertical" />
     </ScrollView>
+
 </LinearLayout>

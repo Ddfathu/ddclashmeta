@@ -11,6 +11,7 @@ import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import com.github.kr328.clash.service.ProfileProcessor
 import com.github.kr328.clash.service.data.Imported
@@ -198,6 +199,24 @@ class EasyConfigActivity : AppCompatActivity() {
             return
         }
 
+        val isRawNodes = !rawText.contains("mixed-port:") && !rawText.contains("port:")
+        if (isRawNodes) {
+            val modes = EasyConfigManager.DnsMode.values()
+            val modeLabels = modes.map { it.displayName }.toTypedArray()
+
+            AlertDialog.Builder(this)
+                .setTitle("Pilih Mode DNS")
+                .setItems(modeLabels) { _, which ->
+                    executeSaveConfig(rawText, modes[which])
+                }
+                .setNegativeButton("Batal", null)
+                .show()
+        } else {
+            executeSaveConfig(rawText, EasyConfigManager.DnsMode.REDIR_HOST)
+        }
+    }
+
+    private fun executeSaveConfig(rawText: String, dnsMode: EasyConfigManager.DnsMode) {
         scope.launch(Dispatchers.IO) {
             try {
                 // Ambil nama node jika ada, atau buat nama profil unik berdasarkan waktu
@@ -210,12 +229,11 @@ class EasyConfigActivity : AppCompatActivity() {
                 val profileDir = this@EasyConfigActivity.importedDir.resolve(targetUuid.toString())
                 if (!profileDir.exists()) profileDir.mkdirs()
 
-                // Jika user paste link mentah/node mentah, bungkus jadi full config.
-                // Jika sudah full config (ada mixed-port), gunakan langsung.
+                // Jika user paste link mentah/node mentah, bungkus jadi full config dengan DNS mode terpilih.
                 val fullConfig = if (rawText.contains("mixed-port:") || rawText.contains("port:")) {
                     rawText
                 } else {
-                    EasyConfigManager.buildFullConfig(rawText)
+                    EasyConfigManager.buildFullConfig(rawText, dnsMode)
                 }
 
                 val targetFile = profileDir.resolve("config.yaml")
